@@ -1,4 +1,4 @@
-# Usage: python3 main.py PATH_TO_ANALYZE -s MIN_SIZE_GB 
+# Usage: python3 main.py PATH_TO_ANALYZE -s MIN_SIZE_GB
 
 import argparse
 import traceback
@@ -183,20 +183,6 @@ def wait_task(futures_queue: Queue):
     while future is not None:
         _ = future.result()
         future = dequeue_or_none(futures_queue)
-
-
-def curses(stdscr):
-    # Clear screen
-    stdscr.clear()
-
-    # This raises ZeroDivisionError when i == 10.
-    for i in range(1, 11):
-        v = i
-        print(v)
-        stdscr.addstr(i, 0, '10 divided by {} is {}'.format(v, 10/v))
-
-    stdscr.refresh()
-    stdscr.getkey()
 
 
 if __name__ == '__main__':
