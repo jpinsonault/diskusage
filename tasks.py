@@ -1,7 +1,13 @@
+from asyncio import Future
 from itertools import islice
-from queue import Queue
+from pathlib import Path
+from queue import Queue, Empty
+from time import sleep
 
+from CentralDispatch import SerialDispatchQueue, ConcurrentDispatchQueue
+from folder import Folder
 from foldercore import folder_from_path
+from funcutils import wrap_with_try
 
 
 def print_task(stdscr, root_folder: Folder, done_signal: Future):
@@ -25,35 +31,32 @@ def print_folder_tree(lines: [str], folder: Folder, to_depth: int, current_depth
             print_folder_tree(lines, sub_folder, to_depth=to_depth, current_depth=current_depth+1)
 
 
-def collect_results(task_queue: Queue, submit_task):
-    new_folder = task_queue.get(block=True)
-
+def collect_results(new_folder):
     new_folder.parent.insert_folder(new_folder)
 
-    for sub_folder_path in sub_paths(new_folder.path):
-        submit_task(sub_folder_path, new_folder)
 
-
-def analyze_folder_task(task_queue: Queue, on_complete, path: Path, parent: Folder):
+@wrap_with_try
+def analyze_folder_task(folder_work_dispatch_queue: ConcurrentDispatchQueue, update_tree_dispatch_queue: SerialDispatchQueue, path: Path, parent: Folder):
     folder = folder_from_path(path, parent)
 
-    task_queue.put(folder, block=True)
-    on_complete()
+    for sub_folder_path in sub_paths(folder.path):
+        print(f"Adding work for {sub_folder_path}")
+        folder_work_dispatch_queue.submit_async(analyze_folder_task, folder_work_dispatch_queue, update_tree_dispatch_queue, sub_folder_path, folder)
+
+    update_tree_dispatch_queue.submit_async(collect_results, folder)
 
 
 def sub_paths(path):
     return [folder for folder in path.iterdir() if folder.is_dir()]
 
 
-def wait_task(futures_queue: Queue):
-    def dequeue_or_none(queue: Queue):
-        try:
-            return queue.get(timeout=1)
-        except Empty:
-            return None
+@wrap_with_try
+def wait_on_futures(futures_queue: Queue):
+    try:
+        future = futures_queue.get_nowait()
 
-    future: Future = dequeue_or_none(futures_queue)
-
-    while future is not None:
-        _ = future.result()
-        future = dequeue_or_none(futures_queue)
+        while True:
+            _ = future.result()
+            future = futures_queue.get_nowait()
+    except Empty:
+        return
