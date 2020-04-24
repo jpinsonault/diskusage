@@ -1,8 +1,20 @@
 from concurrent.futures import Future
 from concurrent.futures.thread import ThreadPoolExecutor
 from queue import Queue, Empty
-
+import functools
 from funcutils import wrap_with_try
+
+
+def perform_on(func, dispatch_queue, do_async=False):
+    @functools.wraps(func)
+    def inner_function(*args, **kwargs):
+        future = dispatch_queue.submit_async(func, *args, **kwargs)
+        if do_async:
+            return future
+        else:
+            return future.result()
+
+    return inner_function
 
 
 @wrap_with_try
@@ -85,3 +97,11 @@ class CentralDispatch:
     @staticmethod
     def exhaust_futures(future_queue: Queue) -> Future:
         return CentralDispatch.future(wait_on_futures, future_queue)
+
+    @classmethod
+    def concat(cls, *args):
+        def _concat(*args):
+            for future in args:
+                future.result()
+
+        return CentralDispatch.future(_concat, *args)

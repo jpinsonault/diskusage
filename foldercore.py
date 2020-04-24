@@ -17,3 +17,6 @@ def folder_from_path(path: Path, parent: Folder):
     new_folder = Folder(path, parent, FolderStats(size, last_modified))
 
     return new_folder
+
+def sub_paths(path):
+    return [folder for folder in path.iterdir() if folder.is_dir()]
