@@ -37,8 +37,11 @@ class Activity:
 
         next_y_index = 0
 
+        total_fixed_size = sum(context.get("fixed_size", 0) for _, context in self.display_state.items())
+
         for view, context in self.display_state.items():
-            used_lines = context["print_fn"](screen, context, next_y_index)
+            remaining_height = (num_rows - total_fixed_size) + context.get("fixed_size", 0)
+            used_lines = context["print_fn"](screen, context, next_y_index, remaining_height)
             next_y_index += used_lines
 
             if next_y_index >= num_rows:

@@ -10,6 +10,8 @@ from funcutils import wrap_with_try
 
 ScanResult = namedtuple("ScanResult", ["folder"])
 ScanError = namedtuple("ScanError", ["error"])
+class ScanComplete: pass
+class ScanStarted: pass
 
 
 class FolderScanApp(Application):
@@ -28,7 +30,7 @@ class FolderScanApp(Application):
         self.start_folder_scan(self.args.path)
 
     def start_folder_scan(self, path):
-        self.folder_scan_future = CentralDispatch.future(self._scan_folder, Path(path))
+        CentralDispatch.future(self._scan_folder, Path(path))
 
     def _scan_folder(self, root_path: Path):
         self.folder_scan_tree = folder_from_path(root_path, None)
@@ -38,10 +40,10 @@ class FolderScanApp(Application):
                 self.analyze_folder_task, sub_folder_path, self.folder_scan_tree
             )
 
-        work_done = self.folder_work_dispatch_queue.finish_work()
-        results_collected = self.collect_results_dispatch_queue.finish_work()
+        self.folder_work_dispatch_queue.finish_work().result()
+        self.collect_results_dispatch_queue.finish_work().result()
 
-        return CentralDispatch.concat(work_done, results_collected)
+        self.event_queue.put(ScanComplete())
 
     def collect_results(self, new_folder: Folder):
         new_folder.parent.insert_folder(new_folder)
