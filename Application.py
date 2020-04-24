@@ -15,6 +15,8 @@ class KeyStroke:
 class Activity:
     def __init__(self):
         self.application = None
+        self.current_display = []
+        self.next_display = []
 
     def start(self, application):
         self.application = application
@@ -27,6 +29,13 @@ class Activity:
     def on_stop(self): pass
 
     def on_event(self, event: object): pass
+
+    def refresh_screen(self):
+        self.current_display = self.next_display
+
+        for view, context in self.current_display:
+
+
 
 
 class Application:
