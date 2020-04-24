@@ -15,8 +15,8 @@ class KeyStroke:
 class Activity:
     def __init__(self):
         self.application = None
-        self.current_display = []
-        self.next_display = []
+        self.display_state = {}
+        self.previous_display_state = {}
 
     def start(self, application):
         self.application = application
@@ -31,11 +31,21 @@ class Activity:
     def on_event(self, event: object): pass
 
     def refresh_screen(self):
-        self.current_display = self.next_display
+        screen = self.application.curses_screen
+        screen.clear()
+        num_rows, num_cols = self.application.curses_screen.getmaxyx()
 
-        for view, context in self.current_display:
+        next_y_index = 0
 
+        for view, context in self.display_state.items():
+            used_lines = context["print_fn"](screen, context, next_y_index)
+            next_y_index += used_lines
 
+            if next_y_index >= num_rows:
+                break
+
+        screen.refresh()
+        self.previous_display_state = self.display_state
 
 
 class Application:
@@ -62,16 +72,16 @@ class Application:
     def start(self, activity: Activity):
         self.shutdown_signal = CentralDispatch.future(self._event_monitor)
         self.start_key_monitor()
-        self.on_started()
+        self.on_start()
 
         self.segue_to(activity)
         self.shutdown_signal.result()
 
-    def on_started(self): pass
+    def on_start(self): pass
 
     def _segue_to(self, activity: Activity):
         if self.current_activity is not None:
-            self.current_activity.stop(application=self)
+            self.current_activity.stop()
             self.current_activity.on_stop()
 
         self.current_activity = activity

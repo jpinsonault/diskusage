@@ -21,11 +21,11 @@ class FolderScanApp(Application):
         self.folder_work_dispatch_queue = None
         self.folder_scan_tree = None
 
-    def on_started(self):
+    def on_start(self):
         self.collect_results_dispatch_queue = CentralDispatch.create_serial_queue()
         self.folder_work_dispatch_queue = CentralDispatch.create_concurrent_queue(size=5)
 
-        self.folder_scan_future = self.start_folder_scan(self.args.path)
+        self.start_folder_scan(self.args.path)
 
     def start_folder_scan(self, path):
         self.folder_scan_future = CentralDispatch.future(self._scan_folder, Path(path))
@@ -52,7 +52,6 @@ class FolderScanApp(Application):
 
         if not self.shutdown_signal.done():
             for sub_folder_path in sub_paths(folder.path):
-                print(f"Adding work for {sub_folder_path}")
                 self.folder_work_dispatch_queue.submit_async(self.analyze_folder_task, sub_folder_path, folder)
 
         self.collect_results_dispatch_queue.submit_async(self.collect_results, folder)
