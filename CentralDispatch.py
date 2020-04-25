@@ -1,3 +1,4 @@
+import threading
 import traceback
 from concurrent.futures import Future
 from concurrent.futures.thread import ThreadPoolExecutor
@@ -106,6 +107,14 @@ class CentralDispatch:
     def future(block, *args, **kwargs) -> Future:
         dispatch_queue = SerialDispatchQueue(exception_handler=CentralDispatch.default_exception_handler)
         return dispatch_queue.submit_async(block, *args, **kwargs)
+
+    @staticmethod
+    def timer(interval, callback, *args) -> threading.Timer:
+        task = CentralDispatch.default_exception_handler(callback)
+
+        timer = threading.Timer(interval, task, args)
+        timer.daemon = True
+        return timer
 
     @staticmethod
     def exhaust_futures(future_queue: Queue) -> Future:

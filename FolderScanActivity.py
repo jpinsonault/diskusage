@@ -1,13 +1,18 @@
 import curses
-import threading
 from itertools import islice
 
 import Keys
-from Application import Activity, KeyStroke
+from Activity import Activity
+from CentralDispatch import CentralDispatch
+from EventTypes import KeyStroke
 from FolderScanApp import ScanComplete, ScanStarted
 from HelpActivity import HelpActivity
 from foldercore import breadth_first
-from printers import print_bottom_bar, print_top_bar, start_stop
+from printers import print_bottom_bar, print_top_bar, start_stop, ScreenLine
+
+
+def print_context_menu(screen, context, start_index) -> []:
+    pass
 
 
 def print_folder_tree(screen, context, start_index, remaining_height):
@@ -23,6 +28,9 @@ def print_folder_tree(screen, context, start_index, remaining_height):
 
     start, stop = start_stop(selected_index, remaining_height, len(folders))
     y_index = start_index
+
+    screen_lines = []
+
     for folder, depth in islice(context["folder_data"], start, stop):
         size_gb = folder.folder_stats.size / pow(1024, 3)
 
@@ -31,11 +39,16 @@ def print_folder_tree(screen, context, start_index, remaining_height):
         else:
             mode = curses.A_NORMAL
 
+        # screen_lines += print_context_menu(screen, context, start_index)
+
         text = "{size:.2f}GB - {name}".format(size=size_gb, name=folder.path)
-        screen.addstr(y_index, depth * 2, text, mode)
+        screen_lines.append(ScreenLine(y_index, depth * 2, text, mode))
         y_index += 1
 
-    return y_index - start_index
+    for screen_line in islice(screen_lines, start, stop):
+        screen_line.print_to(screen)
+
+    return len(screen_lines)
 
 
 class FolderScanActivity(Activity):
@@ -65,6 +78,8 @@ class FolderScanActivity(Activity):
         if isinstance(event, KeyStroke):
             if chr(event.key) == "h":
                 self.application.segue_to(HelpActivity())
+            if chr(event.key) == "e":
+                raise Exception("This is just a test")
             if event.key == curses.KEY_UP:
                     self.move_selected_folder_up()
             elif event.key == curses.KEY_DOWN:
@@ -87,15 +102,14 @@ class FolderScanActivity(Activity):
             self.update_bottom_bar("status", "Folder scan in progress")
 
     def _refresh_timer(self, shutdown_signal):
-        thread = threading.Timer(1.0, self._refresh_timer, [shutdown_signal])
+        timer = CentralDispatch.timer(1.0, self._refresh_timer, shutdown_signal)
 
-        if not shutdown_signal.done():
-            thread.daemon = True
-            thread.start()
+        if not shutdown_signal.done() and self.application is not None:
+            timer.start()
 
             self.refresh_tree_state()
 
-            if not self.application.shutdown_signal.done():
+            if not shutdown_signal.done():
                 self.application.main_thread.submit_async(self.refresh_screen)
 
     def refresh_tree_state(self):

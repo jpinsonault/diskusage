@@ -1,14 +1,31 @@
 import curses
 from itertools import islice
+from typing import Optional
 
 
-def print_top_bar(screen, context, start_index, remaining_height):
+def default_line_printer(screen, screen_line):
+    screen.addstr(screen_line.y, screen_line.x, screen_line.text, screen_line.mode)
+
+
+class ScreenLine:
+    def __init__(self, y, x, text=None, mode=curses.A_NORMAL, print_fn=default_line_printer):
+        self.x = x
+        self.y = y
+        self.text = text
+        self.mode = mode
+        self.print_fn = print_fn
+
+    def print_to(self, screen):
+        self.print_fn(screen, self)
+
+
+def print_top_bar(screen, context, start_index, remaining_height) -> int:
     items = [text for key, text in context["items"].items()]
     screen.addstr(start_index, 0, " | ".join(items), curses.A_BOLD)
     return context["fixed_size"]
 
 
-def print_bottom_bar(screen, context, start_index, remaining_height):
+def print_bottom_bar(screen, context, start_index, remaining_height) -> int:
     num_rows, num_cols = screen.getmaxyx()
     items = [text for key, text in context["items"].items()]
 
@@ -35,13 +52,17 @@ def start_stop(index, window_size, list_size):
 
 
 # Sanitizes index to make sure it's in a list
-def get_selected(index, items):
-    if index is None: return None
+def get_selected(item, items) -> (Optional[object], int):
+    if item is None:
+        if len(items) > 0:
+            return items[0], 0
+        else:
+            return None, 0
 
-    if 0 <= index <= len(items):
-        return items[index]
+    if item in items:
+        return item, items.index(item)
     else:
-        return None
+        return None, 0
 
 
 def cut_items_to_window(selected_index, items, window_size):
@@ -53,11 +74,42 @@ def default_item_printer(screen, y_index, item, mode):
     screen.addstr(y_index, 0, str(item), mode)
 
 
-def print_scroll_list(screen, context, start_index, remaining_height, item_printer=default_item_printer):
-    selected_item = get_selected(context["selected"], context["commands"])
+def tuple_item_printer(screen, y_index, item, mode):
+    screen.addstr(y_index, 0, str(item[0]), mode)
+
+
+def scroll_up(context):
+    selected_item = context["selected"]
+    items = context["items"]
+    item, index = get_selected(selected_item, items)
+
+    try:
+        new_selected_item = items[max(0, index - 1)]
+    except IndexError:
+        new_selected_item = None
+
+    context["selected"] = new_selected_item
+
+
+def scroll_down(context):
+    selected_item = context["selected"]
+    items = context["items"]
+    item, index = get_selected(selected_item, items)
+
+    try:
+        new_selected_index = min(len(items) - 1, index + 1)
+        new_selected_item = items[new_selected_index]
+    except IndexError:
+        new_selected_item = None
+
+    context["selected"] = new_selected_item
+
+
+def print_scroll_list(screen, context, start_index, remaining_height, item_printer=default_item_printer) -> int:
+    selected_item, selected_index = get_selected(context["selected"], context["items"])
 
     y_index = start_index
-    visible_items = cut_items_to_window(context["selected"], context["commands"], remaining_height)
+    visible_items = cut_items_to_window(selected_index, context["items"], remaining_height)
 
     for item in visible_items:
         if item == selected_item:
@@ -69,3 +121,22 @@ def print_scroll_list(screen, context, start_index, remaining_height, item_print
         y_index += 1
 
     return y_index - start_index
+
+
+def print_multiline_text(screen, context, start_index, remaining_height) -> int:
+    def expand_tabs(text):
+        return "    ".join(text.split("\t"))
+
+    num_rows, num_cols = screen.getmaxyx()
+
+    lines = []
+    for index, line in enumerate(context["text"].split("\n")):
+        lines.append((expand_tabs(line), index))
+
+    context["items"] = lines
+
+    return print_scroll_list(screen, context, start_index, remaining_height, item_printer=tuple_item_printer)
+
+
+
+

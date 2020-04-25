@@ -1,67 +1,12 @@
-import functools
 import traceback
 from collections import defaultdict
 from enum import Enum
 from queue import Queue
 
+from Activity import Activity
 from CentralDispatch import CentralDispatch
-
-
-class StopApplication:
-    def __init__(self, exception=None):
-        self.exception = exception
-
-
-class ExceptionOccured:
-    def __init__(self, exception):
-        self.exception = exception
-
-
-class KeyStroke:
-    def __init__(self, key):
-        self.key = key
-
-
-class Activity:
-    def __init__(self):
-        self.application = None
-        self.display_state = {}
-        self.previous_display_state = {}
-
-    def _start(self, application):
-        self.application = application
-        self.on_start()
-        self.refresh_screen()
-
-    def on_start(self): pass
-
-    def _stop(self):
-        self.on_stop()
-        self.application = None
-
-    def on_stop(self): pass
-
-    def on_event(self, event: object): pass
-
-    def refresh_screen(self):
-        screen = self.application.curses_screen
-        screen.clear()
-        num_rows, num_cols = self.application.curses_screen.getmaxyx()
-
-        next_y_index = 0
-
-        total_fixed_size = sum(context.get("fixed_size", 0) for _, context in self.display_state.items())
-
-        for view, context in self.display_state.items():
-            remaining_height = (num_rows - total_fixed_size) + context.get("fixed_size", 0)
-            used_lines = context["print_fn"](screen, context, next_y_index, remaining_height)
-            next_y_index += used_lines
-
-            if next_y_index >= num_rows:
-                break
-
-        screen.refresh()
-        self.previous_display_state = self.display_state
+from EventTypes import StopApplication, ExceptionOccured, KeyStroke
+from ShowExceptionActivity import ShowExceptionActivity
 
 
 class Segue(Enum):
@@ -79,6 +24,8 @@ class Application:
 
         self.shutdown_signal = None
         self.main_thread = None
+
+        self.last_exception = None
 
     def handle_shutdown(self, shutdown_event):
         if shutdown_event.exception:
@@ -104,7 +51,11 @@ class Application:
         for event_type in self.event_subscribers:
             self.unsubscribe(event_type, delegate)
 
+    def redirect_stdout(self):
+        pass
+
     def start(self, activity: Activity):
+        self.redirect_stdout()
         CentralDispatch.default_exception_handler = self._shutdown_app_exception_handler
 
         self.main_thread = CentralDispatch.create_serial_queue()
@@ -127,9 +78,9 @@ class Application:
     def _start_activity(self, activity):
         activity._start(application=self)
 
-    def _segue_to(self, activity: Activity, seque_type=Segue.REPLACE):
+    def _segue_to(self, activity: Activity, segue_type):
         if len(self.stack) > 0:
-            if seque_type == Segue.REPLACE:
+            if segue_type == Segue.REPLACE:
                 current_activity = self.stack.pop()
             else:
                 current_activity = self.stack[-1]
@@ -140,10 +91,9 @@ class Application:
 
         self.stack.append(activity)
         activity._start(application=self)
-        activity.on_start()
 
-    def segue_to(self, activity: Activity):
-        self.main_thread.submit_async(self._segue_to, activity)
+    def segue_to(self, activity: Activity, segue_type=Segue.PUSH):
+        self.main_thread.submit_async(self._segue_to, activity, segue_type=segue_type)
 
     def _pop_activity(self):
         current_activity = self.stack.pop()
@@ -204,7 +154,12 @@ class Application:
 
     def on_event(self, event):
         if isinstance(event, ExceptionOccured):
-            self.event_queue.put(StopApplication(exception=event.exception))
+            if self.last_exception is not None:
+                print("While handling one exception, another occurred:")
+                self.event_queue.put(StopApplication(exception=event.exception))
+            else:
+                self.last_exception = event.exception
+                self.segue_to(ShowExceptionActivity(event.exception), segue_type=Segue.PUSH)
 
     def _shutdown_app_exception_handler(self, function):
         def inner_function(*args, **kwargs):
