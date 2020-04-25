@@ -6,7 +6,6 @@ from Application import Application
 from CentralDispatch import CentralDispatch
 from folder import Folder
 from foldercore import folder_from_path, sub_paths
-from funcutils import wrap_with_try
 
 ScanResult = namedtuple("ScanResult", ["folder"])
 ScanError = namedtuple("ScanError", ["error"])
@@ -48,12 +47,12 @@ class FolderScanApp(Application):
     def collect_results(self, new_folder: Folder):
         new_folder.parent.insert_folder(new_folder)
 
-    @wrap_with_try
     def analyze_folder_task(self, path: Path, parent: Folder):
         folder = folder_from_path(path, parent)
 
-        if not self.shutdown_signal.done():
-            for sub_folder_path in sub_paths(folder.path):
+        for sub_folder_path in sub_paths(folder.path):
+            if not self.shutdown_signal.done():
                 self.folder_work_dispatch_queue.submit_async(self.analyze_folder_task, sub_folder_path, folder)
 
-        self.collect_results_dispatch_queue.submit_async(self.collect_results, folder)
+        if not self.shutdown_signal.done():
+            self.collect_results_dispatch_queue.submit_async(self.collect_results, folder)

@@ -5,39 +5,9 @@ from itertools import islice
 import Keys
 from Application import Activity, KeyStroke
 from FolderScanApp import ScanComplete, ScanStarted
+from HelpActivity import HelpActivity
 from foldercore import breadth_first
-
-
-def print_top_bar(screen, context, start_index, remaining_height):
-    items = [text for key, text in context["items"].items()]
-    screen.addstr(start_index, 0, " | ".join(items), curses.A_BOLD)
-    return context["fixed_size"]
-
-
-def print_bottom_bar(screen, context, start_index, remaining_height):
-    num_rows, num_cols = screen.getmaxyx()
-    items = [text for key, text in context["items"].items()]
-
-    screen.addstr(num_rows-1, 0, " | ".join(items), curses.A_BOLD)
-    return context["fixed_size"]
-
-
-def start_stop(index, window_size, list_size):
-    if window_size % 2 == 0:
-        up = window_size//2
-        down = window_size//2 - 1
-    else:
-        up = window_size//2
-        down = window_size//2
-
-    # if topped out
-    if index - up < 0:
-        return 0, min(window_size, list_size)
-    # if bottomed out
-    elif index + down > list_size:
-        return max(0, list_size-window_size), list_size
-    else:
-        return index - up, index + down+1
+from printers import print_bottom_bar, print_top_bar, start_stop
 
 
 def print_folder_tree(screen, context, start_index, remaining_height):
@@ -52,7 +22,6 @@ def print_folder_tree(screen, context, start_index, remaining_height):
         selected_index = folders.index(context["selected_folder"])
 
     start, stop = start_stop(selected_index, remaining_height, len(folders))
-    print(f"index: {selected_index}, window_size: {remaining_height}, list_size: {len(folders)}, start: {start}, stop: {stop}")
     y_index = start_index
     for folder, depth in islice(context["folder_data"], start, stop):
         size_gb = folder.folder_stats.size / pow(1024, 3)
@@ -74,9 +43,9 @@ class FolderScanActivity(Activity):
         super().__init__()
 
     def on_start(self):
-        self.application.subscribe(event_type=KeyStroke, activity=self)
-        self.application.subscribe(event_type=ScanComplete, activity=self)
-        self.application.subscribe(event_type=ScanStarted, activity=self)
+        self.application.subscribe(event_type=KeyStroke, delegate=self)
+        self.application.subscribe(event_type=ScanComplete, delegate=self)
+        self.application.subscribe(event_type=ScanStarted, delegate=self)
 
         self.display_state = {"top_bar": {"items": {"title": "Beagle's Folder Analyzer",
                                                     "help": "Press 'h' for help"},
@@ -92,16 +61,12 @@ class FolderScanActivity(Activity):
 
         self._refresh_timer()
 
-
-    def on_stop(self):
-        self.application.unsubscribe(event_type=KeyStroke, activity=self)
-        self.application.unsubscribe(event_type=ScanComplete, activity=self)
-        self.application.unsubscribe(event_type=ScanStarted, activity=self)
-
     def on_event(self, event):
         if isinstance(event, KeyStroke):
+            if chr(event.key) == "h":
+                self.application.segue_to(HelpActivity())
             if event.key == curses.KEY_UP:
-                self.move_selected_folder_up()
+                    self.move_selected_folder_up()
             elif event.key == curses.KEY_DOWN:
                 self.move_selected_folder_down()
             elif event.key == Keys.LEFT_BRACKET:
@@ -123,12 +88,14 @@ class FolderScanActivity(Activity):
 
     def _refresh_timer(self):
         thread = threading.Timer(1.0, self._refresh_timer)
-        thread.daemon = True
-        thread.start()
+        if not self.application.shutdown_signal.done():
+            thread.daemon = True
+            thread.start()
 
-        self.refresh_tree_state()
+            self.refresh_tree_state()
 
-        self.application.main_thread.submit_async(self.refresh_screen)
+            if not self.application.shutdown_signal.done():
+                self.application.main_thread.submit_async(self.refresh_screen)
 
     def refresh_tree_state(self):
         if self.application.folder_scan_tree is not None:

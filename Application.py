@@ -1,10 +1,15 @@
+import functools
+import traceback
 from collections import defaultdict
+from enum import Enum
 from queue import Queue
 
 from CentralDispatch import CentralDispatch
 
 
-class StopApplication: pass
+class StopApplication:
+    def __init__(self, exception=None):
+        self.exception = exception
 
 
 class KeyStroke:
@@ -18,12 +23,15 @@ class Activity:
         self.display_state = {}
         self.previous_display_state = {}
 
-    def start(self, application):
+    def _start(self, application):
         self.application = application
+        self.on_start()
+        self.refresh_screen()
 
     def on_start(self): pass
 
-    def stop(self):
+    def _stop(self):
+        self.on_stop()
         self.application = None
 
     def on_stop(self): pass
@@ -51,48 +59,94 @@ class Activity:
         self.previous_display_state = self.display_state
 
 
+class Segue(Enum):
+    PUSH = 0
+    REPLACE = 1
+
+
 class Application:
     def __init__(self, curses_screen):
         self.curses_screen = curses_screen
         self.event_subscribers = defaultdict(set)
-        self.current_activity = None
+        self.stack = []
 
         self.event_queue = Queue()
 
         self.shutdown_signal = None
         self.main_thread = CentralDispatch.create_serial_queue()
 
-    def subscribe(self, event_type, activity: Activity):
-        self.event_subscribers[event_type].add(activity)
+    def handle_shutdown(self, shutdown_event):
+        if shutdown_event.exception:
+            try:
+                raise shutdown_event.exception
+            except Exception as e:
+                print("Shutdown because of error:")
+                print(f"{e.__class__.__name__}: {e}")
+                print(traceback.format_exc())
+        else:
+            print("Exited Normally")
 
-    def unsubscribe(self, event_type, activity: Activity):
-        self.event_subscribers[event_type].remove(activity)
+    def subscribe(self, event_type, delegate):
+        self.event_subscribers[event_type].add(delegate)
 
-    def unsubscribe_all(self, activity: Activity):
+    def unsubscribe(self, event_type, delegate):
+        self.event_subscribers[event_type].remove(delegate)
+
+    def unsubscribe_all(self, delegate):
         for event_type in self.event_subscribers:
-            self.unsubscribe(event_type, activity)
+            self.unsubscribe(event_type, delegate)
 
     def start(self, activity: Activity):
+        CentralDispatch.default_exception_handler = self._shutdown_app_exception_handler
         self.shutdown_signal = CentralDispatch.future(self._event_monitor)
         self.start_key_monitor()
         self.on_start()
 
         self.segue_to(activity)
-        self.shutdown_signal.result()
+        shutdown_event = self.shutdown_signal.result()
+
+        self.handle_shutdown(shutdown_event)
 
     def on_start(self): pass
 
-    def _segue_to(self, activity: Activity):
-        if self.current_activity is not None:
-            self.current_activity.stop()
-            self.current_activity.on_stop()
+    def _stop_activity(self, activity):
+        activity._stop()
+        self.unsubscribe_all(activity)
 
-        self.current_activity = activity
-        activity.start(application=self)
+    def _start_activity(self, activity):
+        activity._start(application=self)
+
+    def _segue_to(self, activity: Activity, seque_type=Segue.REPLACE):
+        if len(self.stack) > 0:
+            if seque_type == Segue.REPLACE:
+                current_activity = self.stack.pop()
+            else:
+                current_activity = self.stack[-1]
+
+            current_activity._stop()
+            current_activity.on_stop()
+            self.unsubscribe_all(current_activity)
+
+        self.stack.append(activity)
+        activity._start(application=self)
         activity.on_start()
 
     def segue_to(self, activity: Activity):
         self.main_thread.submit_async(self._segue_to, activity)
+
+    def _pop_activity(self):
+        current_activity = self.stack.pop()
+        if len(self.stack) > 0:
+            returning_activity = self.stack[-1]
+
+            self._stop_activity(current_activity)
+            self._start_activity(returning_activity)
+        else:
+            # We've popped the last activity
+            self.event_queue.put(StopApplication())
+
+    def pop_activity(self):
+        self.main_thread.submit_async(self._pop_activity)
 
     def _dispatch_event(self, subscriber, event):
         subscriber.on_event(event)
@@ -108,9 +162,12 @@ class Application:
             self.dispatch_event(event)
             event = self.event_queue.get()
 
+        # Return the last even, because it might contain an exception
+        return event
+
     def _key_monitor(self, screen):
         # TODO hook up the shutdown signal
-        while True:
+        while not self.shutdown_signal.done():
             key = screen.getch()
 
             # 3 = ctrl-c
@@ -137,3 +194,12 @@ class Application:
 
     def on_event(self, event):
         pass
+
+    def _shutdown_app_exception_handler(self, function):
+        def inner_function(*args, **kwargs):
+            try:
+                return function(*args, **kwargs)
+            except Exception as e:
+                self.event_queue.put(StopApplication(exception=e))
+
+        return inner_function

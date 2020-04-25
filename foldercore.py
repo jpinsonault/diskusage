@@ -12,7 +12,7 @@ def folder_from_path(path: Path, parent: Folder):
         files = list(path.iterdir())
         size = sum(file.stat().st_size for file in files)
         last_modified = max(file.stat().st_mtime for file in files)
-    except ValueError:
+    except (ValueError, PermissionError):
         pass
 
     new_folder = Folder(path, parent, FolderStats(size, last_modified))
@@ -21,7 +21,10 @@ def folder_from_path(path: Path, parent: Folder):
 
 
 def sub_paths(path):
-    return [folder for folder in path.iterdir() if folder.is_dir()]
+    try:
+        return [folder for folder in path.iterdir() if folder.is_dir()]
+    except PermissionError:
+        return []
 
 
 def breadth_first(folder, to_depth) -> [Folder]:

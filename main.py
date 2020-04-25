@@ -6,14 +6,18 @@ from curses import wrapper
 from functools import partial
 from pathlib import Path
 
+from CentralDispatch import CentralDispatch
 from FolderScanActivity import FolderScanActivity
 from FolderScanApp import FolderScanApp
 from folder import Folder
 
 
 def main(args, stdscr):
-    app = FolderScanApp(args, stdscr)
-    app.start(FolderScanActivity())
+    try:
+        app = FolderScanApp(args, stdscr)
+        app.start(FolderScanActivity())
+    except Exception as e:
+        print("They got through!")
 
 
 def print_final_output(root_folder: Folder, root_path: Path):

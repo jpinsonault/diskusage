@@ -1,8 +1,8 @@
+import traceback
 from concurrent.futures import Future
 from concurrent.futures.thread import ThreadPoolExecutor
 from queue import Queue, Empty
 import functools
-from funcutils import wrap_with_try
 
 
 def perform_on(func, dispatch_queue, do_async=False):
@@ -17,7 +17,6 @@ def perform_on(func, dispatch_queue, do_async=False):
     return inner_function
 
 
-@wrap_with_try
 def wait_on_futures(futures_queue: Queue):
     try:
         future = futures_queue.get_nowait()
@@ -26,20 +25,33 @@ def wait_on_futures(futures_queue: Queue):
             _ = future.result()
             future = futures_queue.get_nowait()
     except Empty:
-        print("***** Got empty")
         return
+
+
+def wrap_with_try(func):
+    @functools.wraps(func)
+    def inner_function(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            print(f"Error: {e}")
+            print(traceback.format_exc())
+            raise e
+
+    return inner_function
 
 
 class AppShutDownSignal: pass
 
 
 class SerialDispatchQueue:
-    def __init__(self):
+    def __init__(self, exception_handler):
+        self.exception_handler = exception_handler
         self.task_threadpool = ThreadPoolExecutor(1)
         self.futures_queue = Queue()
 
     def submit_async(self, block, *args, **kwargs) -> Future:
-        task = wrap_with_try(block)
+        task = self.exception_handler(block)
 
         future = self.task_threadpool.submit(task, *args, **kwargs)
         self.futures_queue.put(future)
@@ -56,12 +68,13 @@ class SerialDispatchQueue:
 
 
 class ConcurrentDispatchQueue:
-    def __init__(self, size):
+    def __init__(self, size, exception_handler):
+        self.exception_handler = exception_handler
         self.task_threadpool = ThreadPoolExecutor(size)
         self.futures_queue = Queue()
 
     def submit_async(self, block, *args, **kwargs) -> Future:
-        task = wrap_with_try(block)
+        task = self.exception_handler(block)
 
         future = self.task_threadpool.submit(task, *args, **kwargs)
         self.futures_queue.put(future)
@@ -78,20 +91,19 @@ class ConcurrentDispatchQueue:
 
 
 class CentralDispatch:
-    global_concurrent_queue = ConcurrentDispatchQueue(20)
-    global_serial_queue = SerialDispatchQueue()
+    default_exception_handler = wrap_with_try
 
     @staticmethod
     def create_serial_queue() -> SerialDispatchQueue:
-        return SerialDispatchQueue()
+        return SerialDispatchQueue(exception_handler=CentralDispatch.default_exception_handler)
 
     @staticmethod
     def create_concurrent_queue(size) -> ConcurrentDispatchQueue:
-        return ConcurrentDispatchQueue(size)
+        return ConcurrentDispatchQueue(size, exception_handler=CentralDispatch.default_exception_handler)
 
     @staticmethod
     def future(block, *args, **kwargs) -> Future:
-        dispatch_queue = SerialDispatchQueue()
+        dispatch_queue = SerialDispatchQueue(exception_handler=CentralDispatch.default_exception_handler)
         return dispatch_queue.submit_async(block, *args, **kwargs)
 
     @staticmethod
