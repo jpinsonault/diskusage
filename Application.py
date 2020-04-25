@@ -78,7 +78,7 @@ class Application:
         self.event_queue = Queue()
 
         self.shutdown_signal = None
-        self.main_thread = CentralDispatch.create_serial_queue()
+        self.main_thread = None
 
     def handle_shutdown(self, shutdown_event):
         if shutdown_event.exception:
@@ -95,15 +95,20 @@ class Application:
         self.event_subscribers[event_type].add(delegate)
 
     def unsubscribe(self, event_type, delegate):
-        self.event_subscribers[event_type].remove(delegate)
+        try:
+            self.event_subscribers[event_type].remove(delegate)
+        except KeyError:
+            pass
 
     def unsubscribe_all(self, delegate):
         for event_type in self.event_subscribers:
             self.unsubscribe(event_type, delegate)
 
     def start(self, activity: Activity):
-        self.subscribe(event_type=ExceptionOccured, delegate=self)
         CentralDispatch.default_exception_handler = self._shutdown_app_exception_handler
+
+        self.main_thread = CentralDispatch.create_serial_queue()
+        self.subscribe(event_type=ExceptionOccured, delegate=self)
         self.shutdown_signal = CentralDispatch.future(self._event_monitor)
         self.start_key_monitor()
         self.on_start()
@@ -168,7 +173,7 @@ class Application:
             self.dispatch_event(event)
             event = self.event_queue.get()
 
-        # Return the last even, because it might contain an exception
+        # Return the last event, because it might contain an exception
         return event
 
     def _key_monitor(self, screen):
@@ -206,6 +211,6 @@ class Application:
             try:
                 return function(*args, **kwargs)
             except Exception as e:
-                self.event_queue.put(StopApplication(exception=e))
+                self.event_queue.put(ExceptionOccured(exception=e))
 
         return inner_function

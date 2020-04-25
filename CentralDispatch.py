@@ -91,6 +91,7 @@ class ConcurrentDispatchQueue:
 
 
 class CentralDispatch:
+
     default_exception_handler = wrap_with_try
 
     @staticmethod

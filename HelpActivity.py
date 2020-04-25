@@ -24,8 +24,8 @@ class HelpActivity(Activity):
         self.application.subscribe(KeyStroke, self)
 
         self.display_state = {"top_bar": {"items": {"title": "Command help",
-                                                    "message": "Press ESC to return",
-                                                    "fixed_size": 2},
+                                                    "message": "Press ESC to return"},
+                                          "fixed_size": 2,
                                           "print_fn": print_top_bar},
                               "command_list": {"commands": commands,
                                                "selected_index": None,

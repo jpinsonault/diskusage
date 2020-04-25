@@ -59,7 +59,7 @@ class FolderScanActivity(Activity):
                                              "items": {"status": "Folder scan in progress"},
                                              "print_fn": print_bottom_bar}}
 
-        self._refresh_timer()
+        self._refresh_timer(shutdown_signal=self.application.shutdown_signal)
 
     def on_event(self, event):
         if isinstance(event, KeyStroke):
@@ -86,9 +86,10 @@ class FolderScanActivity(Activity):
         if isinstance(event, ScanStarted):
             self.update_bottom_bar("status", "Folder scan in progress")
 
-    def _refresh_timer(self):
-        thread = threading.Timer(1.0, self._refresh_timer)
-        if not self.application.shutdown_signal.done():
+    def _refresh_timer(self, shutdown_signal):
+        thread = threading.Timer(1.0, self._refresh_timer, [shutdown_signal])
+
+        if not shutdown_signal.done():
             thread.daemon = True
             thread.start()
 
