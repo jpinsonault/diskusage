@@ -12,6 +12,11 @@ class StopApplication:
         self.exception = exception
 
 
+class ExceptionOccured:
+    def __init__(self, exception):
+        self.exception = exception
+
+
 class KeyStroke:
     def __init__(self, key):
         self.key = key
@@ -97,6 +102,7 @@ class Application:
             self.unsubscribe(event_type, delegate)
 
     def start(self, activity: Activity):
+        self.subscribe(event_type=ExceptionOccured, delegate=self)
         CentralDispatch.default_exception_handler = self._shutdown_app_exception_handler
         self.shutdown_signal = CentralDispatch.future(self._event_monitor)
         self.start_key_monitor()
@@ -166,7 +172,6 @@ class Application:
         return event
 
     def _key_monitor(self, screen):
-        # TODO hook up the shutdown signal
         while not self.shutdown_signal.done():
             key = screen.getch()
 
@@ -193,7 +198,8 @@ class Application:
         self.main_thread.submit_async(self._debug_message, lines)
 
     def on_event(self, event):
-        pass
+        if isinstance(event, ExceptionOccured):
+            self.event_queue.put(StopApplication(exception=event.exception))
 
     def _shutdown_app_exception_handler(self, function):
         def inner_function(*args, **kwargs):
