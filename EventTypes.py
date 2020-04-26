@@ -11,3 +11,8 @@ class ExceptionOccured:
 class KeyStroke:
     def __init__(self, key):
         self.key = key
+
+
+class ButtonEvent:
+    def __init__(self, identifier):
+        self.identifier = identifier

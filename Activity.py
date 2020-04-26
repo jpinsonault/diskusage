@@ -19,6 +19,12 @@ class Activity:
 
     def on_event(self, event: object): pass
 
+    def handle_ui_input(self, event):
+        for name, context in self.display_state.items():
+            if context.get("focus", False):
+                context["input_handler"](context, event)
+
+
     def refresh_screen(self):
         screen = self.application.curses_screen
         screen.clear()

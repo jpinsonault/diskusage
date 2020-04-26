@@ -9,11 +9,12 @@ from printers import print_top_bar, print_scroll_list, scroll_up, scroll_down, p
 
 admonishments = [
     "Please try harder next time.",
-    "Typical",
-    "Again?",
+    "Typical...",
+    "Ugh, Again?",
     "Really? You're better than this",
     "Good thing I was here to catch it",
-    "Won't be the last time!"
+    "Won't be the last time!",
+    "Computers are terrible."
 ]
 
 

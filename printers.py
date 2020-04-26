@@ -3,20 +3,24 @@ from itertools import islice
 from typing import Optional
 
 
-def default_line_printer(screen, screen_line):
-    screen.addstr(screen_line.y, screen_line.x, screen_line.text, screen_line.mode)
+def is_hidden(context):
+    return context.get("hidden", False)
+
+
+def default_line_printer(screen, context, screen_line, y):
+    screen.addstr(y, screen_line.x, screen_line.text, screen_line.mode)
 
 
 class ScreenLine:
-    def __init__(self, y, x, text=None, mode=curses.A_NORMAL, print_fn=default_line_printer):
+    def __init__(self, context, x, text=None, mode=curses.A_NORMAL, print_fn=default_line_printer):
+        self.context = context
         self.x = x
-        self.y = y
         self.text = text
         self.mode = mode
         self.print_fn = print_fn
 
-    def print_to(self, screen):
-        self.print_fn(screen, self)
+    def print_to(self, screen, y):
+        self.print_fn(screen, self.context, self, y)
 
 
 def print_top_bar(screen, context, start_index, remaining_height) -> int:
