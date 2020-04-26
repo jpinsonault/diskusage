@@ -142,5 +142,37 @@ def print_multiline_text(screen, context, start_index, remaining_height) -> int:
     return print_scroll_list(screen, context, start_index, remaining_height, item_printer=tuple_item_printer)
 
 
+def move_menu_left(context):
+    selected_index = context.get("selected_index", 0)
+
+    context["selected_index"] = (selected_index - 1) % len(context["items"])
 
 
+def move_menu_right(context):
+    selected_index = context.get("selected_index", 0)
+
+    context["selected_index"] = (selected_index + 1) % len(context["items"])
+
+
+def print_context_menu(screen, context, screen_line, y):
+    selected_index = context.get("selected_index", 0)
+    x = screen_line.x
+
+    title = f"{context.get('title', '')}: "
+    screen.addstr(y, x, title, curses.A_BOLD)
+    x += len(title)
+
+    for index in range(len(context["items"])):
+        item = context["items"][index]
+        text = f"[{item}]"
+        if index == selected_index:
+            screen.addstr(y, x, text, curses.A_REVERSE)
+        else:
+            screen.addstr(y, x, text, curses.A_NORMAL)
+
+        x += len(text) + 1
+
+
+def make_context_menu(screen, screen_lines, context) -> []:
+    return [ScreenLine(context=context, x=context["x"], print_fn=print_context_menu),
+            ScreenLine(context=context, x=context["x"], text="")]

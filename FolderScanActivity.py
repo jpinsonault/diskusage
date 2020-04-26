@@ -1,8 +1,5 @@
 import curses
-import os
-import shutil
 import subprocess
-from itertools import islice
 
 import Keys
 from Activity import Activity
@@ -10,102 +7,9 @@ from CentralDispatch import CentralDispatch
 from EventTypes import KeyStroke, ButtonEvent
 from FolderScanApp import ScanComplete, ScanStarted
 from HelpActivity import HelpActivity
-from folder import Folder
-from foldercore import breadth_first
-from printers import print_bottom_bar, print_top_bar, start_stop, ScreenLine, is_hidden
-
-
-def move_menu_left(context):
-    selected_index = context.get("selected_index", 0)
-
-    context["selected_index"] = (selected_index - 1) % len(context["items"])
-
-
-def move_menu_right(context):
-    selected_index = context.get("selected_index", 0)
-
-    context["selected_index"] = (selected_index + 1) % len(context["items"])
-
-
-def print_context_menu(screen, context, screen_line, y):
-    selected_index = context.get("selected_index", 0)
-    x = screen_line.x
-
-    title = f"{context.get('title', '')}: "
-    screen.addstr(y, x, title, curses.A_BOLD)
-    x += len(title)
-
-    for index in range(len(context["items"])):
-        item = context["items"][index]
-        text = f"[{item}]"
-        if index == selected_index:
-            screen.addstr(y, x, text, curses.A_REVERSE)
-        else:
-            screen.addstr(y, x, text, curses.A_NORMAL)
-
-        x += len(text) + 1
-
-
-def make_context_menu(screen, screen_lines, context) -> []:
-    return [
-            ScreenLine(context=context, x=context["x"], print_fn=print_context_menu),
-            ScreenLine(context=context, x=context["x"], text="")]
-
-
-def walk_selected_folder_up(folder, visible_folders) -> Folder:
-    folder_iter = folder
-
-    while folder_iter is not None and folder_iter not in visible_folders:
-        folder_iter = folder_iter.parent
-
-    return folder_iter
-
-
-def index_for_folder(folder, folders) -> int:
-    index = 0
-
-    if folder is not None:
-        index = folders.index(folder)
-
-    return index
-
-
-def print_folder_tree(screen, context, start_index, remaining_height):
-    visible_folders = [folder for folder, _ in context["folder_data"]]
-
-    walk_selected_folder_up(context["selected_folder"], visible_folders)
-
-    selected_index = index_for_folder(context["selected_index"], visible_folders)
-    start, stop = start_stop(selected_index, remaining_height, len(visible_folders))
-
-    screen_lines = make_folder_tree(context, screen, start, stop)
-
-    y_index = start_index
-    for screen_line in islice(screen_lines, start, stop):
-        screen_line.print_to(screen, y_index)
-        y_index += 1
-
-    return len(screen_lines)
-
-
-def make_folder_tree(context, screen, start, stop):
-    screen_lines = []
-    for folder, depth in islice(context["folder_data"], start, stop):
-        size_gb = folder.folder_stats.size / pow(1024, 3)
-
-        text = "{size:.2f}GB - {name}".format(size=size_gb, name=folder.path)
-        if folder == context["selected_folder"]:
-            if is_hidden(context["context_menu"]):
-                screen_lines.append(ScreenLine(context=context, x=depth * 2, text=text, mode=curses.A_REVERSE))
-            else:
-                screen_lines.append(ScreenLine(context=context, x=depth * 2, text=text, mode=curses.A_BOLD))
-
-                context["context_menu"]["x"] = depth * 2
-                context_menu = make_context_menu(screen, screen_lines, context["context_menu"])
-                screen_lines += context_menu
-        else:
-            screen_lines.append(ScreenLine(context=context, x=depth * 2, text=text, mode=curses.A_NORMAL))
-    return screen_lines
+from foldercore import breadth_first, print_folder_tree
+from printers import print_bottom_bar, print_top_bar, is_hidden, move_menu_left, \
+    move_menu_right
 
 
 class FolderScanActivity(Activity):
