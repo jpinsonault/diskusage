@@ -3,7 +3,8 @@ from itertools import islice
 from pathlib import Path
 
 from folder import Folder, FolderStats
-from printers import start_stop, is_hidden, ScreenLine, make_context_menu
+from printers import start_stop, is_hidden, make_context_menu
+from ScreenLine import ScreenLine
 
 
 def folder_from_path(path: Path, parent: Folder):
@@ -68,7 +69,7 @@ def print_folder_tree(screen, context, start_index, remaining_height):
 
     walk_selected_folder_up(context["selected_folder"], visible_folders)
 
-    selected_index = index_for_folder(context["selected_index"], visible_folders)
+    selected_index = index_for_folder(context["selected_folder"], visible_folders)
     start, stop = start_stop(selected_index, remaining_height, len(visible_folders))
 
     screen_lines = make_folder_tree(context, screen, start, stop)
@@ -94,7 +95,7 @@ def make_folder_tree(context, screen, start, stop):
                 screen_lines.append(ScreenLine(context=context, x=depth * 2, text=text, mode=curses.A_BOLD))
 
                 context["context_menu"]["x"] = depth * 2
-                context_menu = make_context_menu(screen, screen_lines, context["context_menu"])
+                context_menu = make_context_menu(context["context_menu"])
                 screen_lines += context_menu
         else:
             screen_lines.append(ScreenLine(context=context, x=depth * 2, text=text, mode=curses.A_NORMAL))

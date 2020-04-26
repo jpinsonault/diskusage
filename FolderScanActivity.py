@@ -48,6 +48,7 @@ class FolderScanActivity(Activity):
 
                 # raise Exception(f"start '{folder.path}'")
                 subprocess.Popen(r'explorer /select,"{}"'.format(folder.path))
+
         if isinstance(event, KeyStroke):
             self.handle_ui_input(event)
             if chr(event.key) == "h":
@@ -161,4 +162,3 @@ class FolderScanActivity(Activity):
 
         context["hidden"] = not is_hidden(context)
         context["selected_index"] = 0
-        self.refresh_screen()

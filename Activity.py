@@ -1,11 +1,15 @@
 class Activity:
     def __init__(self):
         self.application = None
+        self.screen = None
+        self.main_thread = None
         self.display_state = {}
         self.previous_display_state = {}
 
     def _start(self, application):
         self.application = application
+        self.screen = application.curses_screen
+        self.main_thread = application.main_thread
         self.on_start()
         self.refresh_screen()
 
@@ -23,7 +27,6 @@ class Activity:
         for name, context in self.display_state.items():
             if context.get("focus", False):
                 context["input_handler"](context, event)
-
 
     def refresh_screen(self):
         screen = self.application.curses_screen

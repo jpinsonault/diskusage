@@ -2,25 +2,11 @@ import curses
 from itertools import islice
 from typing import Optional
 
+from ScreenLine import ScreenLine
+
 
 def is_hidden(context):
     return context.get("hidden", False)
-
-
-def default_line_printer(screen, context, screen_line, y):
-    screen.addstr(y, screen_line.x, screen_line.text, screen_line.mode)
-
-
-class ScreenLine:
-    def __init__(self, context, x, text=None, mode=curses.A_NORMAL, print_fn=default_line_printer):
-        self.context = context
-        self.x = x
-        self.text = text
-        self.mode = mode
-        self.print_fn = print_fn
-
-    def print_to(self, screen, y):
-        self.print_fn(screen, self.context, self, y)
 
 
 def print_top_bar(screen, context, start_index, remaining_height) -> int:
@@ -156,7 +142,8 @@ def move_menu_right(context):
 
 def print_context_menu(screen, context, screen_line, y):
     selected_index = context.get("selected_index", 0)
-    x = screen_line.x
+
+    x = context["x"]
 
     title = f"{context.get('title', '')}: "
     screen.addstr(y, x, title, curses.A_BOLD)
@@ -166,6 +153,7 @@ def print_context_menu(screen, context, screen_line, y):
         item = context["items"][index]
         text = f"[{item}]"
         if index == selected_index:
+
             screen.addstr(y, x, text, curses.A_REVERSE)
         else:
             screen.addstr(y, x, text, curses.A_NORMAL)
@@ -173,6 +161,6 @@ def print_context_menu(screen, context, screen_line, y):
         x += len(text) + 1
 
 
-def make_context_menu(screen, screen_lines, context) -> []:
+def make_context_menu(context) -> []:
     return [ScreenLine(context=context, x=context["x"], print_fn=print_context_menu),
             ScreenLine(context=context, x=context["x"], text="")]
