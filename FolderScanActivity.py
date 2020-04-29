@@ -7,6 +7,7 @@ from CentralDispatch import CentralDispatch
 from EventTypes import KeyStroke, ButtonEvent
 from FolderScanApp import ScanComplete, ScanStarted
 from HelpActivity import HelpActivity
+from TextInputTest import TextInputTest
 from foldercore import breadth_first, print_folder_tree
 from printers import print_bottom_bar, print_top_bar, is_hidden, move_menu_left, \
     move_menu_right
@@ -29,9 +30,10 @@ class FolderScanActivity(Activity):
                               "folder_tree": {"to_depth": 4,
                                               "folder_data": [],
                                               "selected_folder": None,
-                                              "context_menu": {"title": "Menu",
-                                                               "items": ["open in explorer", "delete"],
-                                                               "hidden": True},
+                                              "context_menu": {"label": "Menu",
+                                                               "items": ["open in explorer", "delete"]},
+                                              "text_input": {"label": "Send us your reckons",
+                                                             "size": 30},
                                               "print_fn": print_folder_tree,
                                               "input_handler": self._handle_folder_tree_input,
                                               "focus": True},
@@ -46,7 +48,6 @@ class FolderScanActivity(Activity):
             if event.identifier == "open in explorer":
                 folder = self.display_state["folder_tree"]["selected_folder"]
 
-                # raise Exception(f"start '{folder.path}'")
                 subprocess.Popen(r'explorer /select,"{}"'.format(folder.path))
 
         if isinstance(event, KeyStroke):
@@ -55,6 +56,8 @@ class FolderScanActivity(Activity):
                 self.application.segue_to(HelpActivity())
             elif chr(event.key) == "e":
                 raise Exception("This is just a test")
+            elif chr(event.key) == "t":
+                self.application.segue_to(TextInputTest())
             else:
                 self.display_state["top_bar"]["items"]["last_key"] = f"Last key: {event.key}"
 
@@ -159,6 +162,12 @@ class FolderScanActivity(Activity):
 
     def toggle_context_menu(self):
         context = self.display_state["folder_tree"]["context_menu"]
+
+        context["hidden"] = not is_hidden(context)
+        context["selected_index"] = 0
+
+    def toggle_text_input(self):
+        context = self.display_state["folder_tree"]["text_input"]
 
         context["hidden"] = not is_hidden(context)
         context["selected_index"] = 0

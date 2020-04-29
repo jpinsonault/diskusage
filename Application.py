@@ -1,3 +1,4 @@
+import curses
 import traceback
 from collections import defaultdict
 from enum import Enum
@@ -56,6 +57,7 @@ class Application:
 
     def start(self, activity: Activity):
         self.redirect_stdout()
+        curses.curs_set(0)
         CentralDispatch.default_exception_handler = self._shutdown_app_exception_handler
 
         self.main_thread = CentralDispatch.create_serial_queue()

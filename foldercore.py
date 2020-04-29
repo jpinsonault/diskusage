@@ -100,3 +100,4 @@ def make_folder_tree(context, screen, start, stop):
         else:
             screen_lines.append(ScreenLine(context=context, x=depth * 2, text=text, mode=curses.A_NORMAL))
     return screen_lines
+

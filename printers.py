@@ -145,9 +145,9 @@ def print_context_menu(screen, context, screen_line, y):
 
     x = context["x"]
 
-    title = f"{context.get('title', '')}: "
-    screen.addstr(y, x, title, curses.A_BOLD)
-    x += len(title)
+    label = f"{context.get('label', '')}: "
+    screen.addstr(y, x, label, curses.A_BOLD)
+    x += len(label)
 
     for index in range(len(context["items"])):
         item = context["items"][index]
@@ -164,3 +164,51 @@ def print_context_menu(screen, context, screen_line, y):
 def make_context_menu(context) -> []:
     return [ScreenLine(context=context, x=context["x"], print_fn=print_context_menu),
             ScreenLine(context=context, x=context["x"], text="")]
+
+
+def get_text(context):
+    return context.get("text", "")
+
+
+def print_text_input(screen, context, screen_line, y):
+    cursor_index = get_cursor_index(context)
+    text = get_text(context)
+
+    x = screen_line.x
+
+    label = f"{context.get('label', '')}: "
+    screen.addstr(y, x, label, curses.A_BOLD)
+    x += len(label)
+
+    for index in range(len(text)):
+        char = text[index]
+        if index == cursor_index:
+            screen.addch(y, x, char, curses.A_REVERSE)
+        else:
+            screen.addch(y, x, char, curses.A_NORMAL)
+        x += 1
+
+    if cursor_index == len(text):
+        screen.addch(y, x, " ", curses.A_REVERSE)
+        x += 1
+
+
+def get_cursor_index(context):
+    return context.get("cursor_index", 0)
+
+
+def get_text_length(context):
+    if "text" in context:
+        return len(context["text"])
+    else:
+        return -1
+
+
+def get_x(context):
+    return context.get("x", 0)
+
+
+def print_text_line(screen, context, start_index, remaining_height):
+    screen.addstr(start_index, get_x(context), context["text"])
+
+    return context["fixed_size"]

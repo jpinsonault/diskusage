@@ -40,7 +40,11 @@ class Activity:
         for view, context in self.display_state.items():
             remaining_height = (num_rows - total_fixed_size) + context.get("fixed_size", 0)
             used_lines = context["print_fn"](screen, context, next_y_index, remaining_height)
-            next_y_index += used_lines
+
+            if used_lines is None:
+                raise Exception(f'{context["print_fn"]} returned None instead of int')
+            else:
+                next_y_index += used_lines
 
             if next_y_index >= num_rows:
                 break
