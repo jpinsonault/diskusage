@@ -1,10 +1,12 @@
 import curses
+from functools import partial
 from itertools import islice
 from pathlib import Path
 
 from folder import Folder, FolderStats
-from printers import start_stop, is_hidden, make_context_menu
-from ScreenLine import ScreenLine
+from printers import start_stop, make_context_menu, print_highlighted_line, print_bold_line, print_line
+from ContextUtils import is_hidden
+from PrintItem import PrintItem
 
 
 def folder_from_path(path: Path, parent: Folder):
@@ -64,7 +66,7 @@ def index_for_folder(folder, folders) -> int:
     return index
 
 
-def print_folder_tree(screen, context, start_index, remaining_height):
+def make_folder_tree(context, remaining_height):
     visible_folders = [folder for folder, _ in context["folder_data"]]
 
     walk_selected_folder_up(context["selected_folder"], visible_folders)
@@ -72,17 +74,12 @@ def print_folder_tree(screen, context, start_index, remaining_height):
     selected_index = index_for_folder(context["selected_folder"], visible_folders)
     start, stop = start_stop(selected_index, remaining_height, len(visible_folders))
 
-    screen_lines = make_folder_tree(context, screen, start, stop)
+    screen_lines = _make_folder_tree(context, start, stop)
 
-    y_index = start_index
-    for screen_line in islice(screen_lines, start, stop):
-        screen_line.print_to(screen, y_index)
-        y_index += 1
-
-    return len(screen_lines)
+    return screen_lines
 
 
-def make_folder_tree(context, screen, start, stop):
+def _make_folder_tree(context, start, stop):
     screen_lines = []
     for folder, depth in islice(context["folder_data"], start, stop):
         size_gb = folder.folder_stats.size / pow(1024, 3)
@@ -90,14 +87,14 @@ def make_folder_tree(context, screen, start, stop):
         text = "{size:.2f}GB - {name}".format(size=size_gb, name=folder.path)
         if folder == context["selected_folder"]:
             if is_hidden(context["context_menu"]):
-                screen_lines.append(ScreenLine(context=context, x=depth * 2, text=text, mode=curses.A_REVERSE))
+                screen_lines.append(partial(print_highlighted_line, depth * 2, text))
             else:
-                screen_lines.append(ScreenLine(context=context, x=depth * 2, text=text, mode=curses.A_BOLD))
+                screen_lines.append(partial(print_bold_line, depth * 2, text))
 
                 context["context_menu"]["x"] = depth * 2
                 context_menu = make_context_menu(context["context_menu"])
                 screen_lines += context_menu
         else:
-            screen_lines.append(ScreenLine(context=context, x=depth * 2, text=text, mode=curses.A_NORMAL))
+            screen_lines.append(partial(print_line, depth * 2, text))
     return screen_lines
 

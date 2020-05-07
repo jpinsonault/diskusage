@@ -8,9 +8,9 @@ from EventTypes import KeyStroke, ButtonEvent
 from FolderScanApp import ScanComplete, ScanStarted
 from HelpActivity import HelpActivity
 from TextInputTest import TextInputTest
-from foldercore import breadth_first, print_folder_tree
-from printers import print_bottom_bar, print_top_bar, is_hidden, move_menu_left, \
-    move_menu_right
+from foldercore import breadth_first, make_folder_tree
+from printers import make_top_bar, make_bottom_bar
+from ContextUtils import move_menu_left, move_menu_right, is_hidden
 
 
 class FolderScanActivity(Activity):
@@ -26,20 +26,21 @@ class FolderScanActivity(Activity):
         self.display_state = {"top_bar": {"items": {"title": "Beagle's Folder Analyzer",
                                                     "help": "Press 'h' for help"},
                                           "fixed_size": 2,
-                                          "print_fn": print_top_bar},
+                                          "line_generator": make_top_bar},
                               "folder_tree": {"to_depth": 4,
                                               "folder_data": [],
                                               "selected_folder": None,
                                               "context_menu": {"label": "Menu",
-                                                               "items": ["open in explorer", "delete"]},
+                                                               "items": ["open in explorer", "delete"],
+                                                               "hidden": True},
                                               "text_input": {"label": "Send us your reckons",
                                                              "size": 30},
-                                              "print_fn": print_folder_tree,
+                                              "line_generator": make_folder_tree,
                                               "input_handler": self._handle_folder_tree_input,
                                               "focus": True},
                               "bottom_bar": {"fixed_size": 2,
                                              "items": {"status": "Folder scan in progress"},
-                                             "print_fn": print_bottom_bar}}
+                                             "line_generator": make_bottom_bar}}
 
         self._refresh_timer(shutdown_signal=self.application.shutdown_signal)
 

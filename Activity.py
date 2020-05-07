@@ -1,3 +1,6 @@
+from ContextUtils import get_fixed_size
+
+
 class Activity:
     def __init__(self):
         self.application = None
@@ -35,19 +38,38 @@ class Activity:
 
         next_y_index = 0
 
-        total_fixed_size = sum(context.get("fixed_size", 0) for _, context in self.display_state.items())
+        total_fixed_size = sum(get_fixed_size(context) for _, context in self.display_state.items())
 
-        for view, context in self.display_state.items():
-            remaining_height = (num_rows - total_fixed_size) + context.get("fixed_size", 0)
-            used_lines = context["print_fn"](screen, context, next_y_index, remaining_height)
+        screen_line_printers = []
+        for key, context in self.display_state.items():
+            fixed_size = get_fixed_size(context)
+            remaining_height = (num_rows - total_fixed_size) + fixed_size
 
-            if used_lines is None:
-                raise Exception(f'{context["print_fn"]} returned None instead of int')
-            else:
-                next_y_index += used_lines
+            line_printers = self._try_make_line(context, remaining_height)
+            screen_line_printers += line_printers
+
+            next_y_index += len(line_printers)
 
             if next_y_index >= num_rows:
                 break
 
+        for y, line_printer in enumerate(screen_line_printers):
+            self._try_print_line(line_printer, screen, y)
+
         screen.refresh()
         self.previous_display_state = self.display_state
+
+    def _try_make_line(self, context, remaining_height):
+        try:
+            line_printers = context["line_generator"](context, remaining_height)
+            return line_printers
+        except Exception as e:
+            print("problem with line generator {}, context={}".format(context["line_generator"], context))
+            raise e
+
+    def _try_print_line(self, line_printer, screen, y):
+        try:
+            line_printer(screen, y)
+        except Exception as e:
+            print("problem with line printer {}".format(line_printer))
+            raise e

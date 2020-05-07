@@ -4,7 +4,8 @@ from functools import partial
 import Keys
 from EventTypes import KeyStroke
 from Activity import Activity
-from printers import print_top_bar, print_scroll_list, scroll_up, scroll_down
+from printers import make_scroll_list, make_top_bar
+from ContextUtils import scroll_up, scroll_down
 
 commands = [
     "Up/Down          | Navigate around",
@@ -24,13 +25,15 @@ class HelpActivity(Activity):
     def on_start(self):
         self.application.subscribe(KeyStroke, self)
 
+        command_list = [(command, i) for i, command in enumerate(commands)]
+
         self.display_state = {"top_bar": {"items": {"title": "Command help",
                                                     "message": "Press ESC to return"},
                                           "fixed_size": 2,
-                                          "print_fn": print_top_bar},
-                              "command_list": {"items": commands,
+                                          "line_generator": make_top_bar},
+                              "command_list": {"items": command_list,
                                                "selected": None,
-                                               "print_fn": print_scroll_list}}
+                                               "line_generator": make_scroll_list}}
 
     def on_event(self, event):
         if isinstance(event, KeyStroke):

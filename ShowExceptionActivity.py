@@ -5,7 +5,8 @@ import traceback
 import Keys
 from EventTypes import KeyStroke
 from Activity import Activity
-from printers import print_top_bar, print_scroll_list, scroll_up, scroll_down, print_bottom_bar, print_multiline_text
+from printers import make_top_bar, make_bottom_bar, make_multiline_text
+from ContextUtils import scroll_up, scroll_down
 
 admonishments = [
     "Please try harder next time.",
@@ -35,13 +36,13 @@ class ShowExceptionActivity(Activity):
         self.display_state = {"top_bar": {"items": {"title": "App has caught an exception",
                                                     "help": "Press ESC to try and go back"},
                                           "fixed_size": 2,
-                                          "print_fn": print_top_bar},
+                                          "line_generator": make_top_bar},
                               "exception_text": {"text": exception_text,
                                                  "selected": None,
-                                                 "print_fn": print_multiline_text},
+                                                 "line_generator": make_multiline_text},
                               "bottom_bar": {"items": {"admonishment": admonishment},
                                              "fixed_size": 2,
-                                             "print_fn": print_bottom_bar}}
+                                             "line_generator": make_bottom_bar}}
 
     def on_stop(self):
         self.application.last_exception = None
