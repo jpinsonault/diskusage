@@ -4,6 +4,7 @@ from concurrent.futures import Future
 from concurrent.futures.thread import ThreadPoolExecutor
 from queue import Queue, Empty
 import functools
+from loguru import logger
 
 
 def perform_on(func, dispatch_queue, do_async=False):
@@ -35,8 +36,8 @@ def wrap_with_try(func):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            print(f"Error: {e}")
-            print(traceback.format_exc())
+            logger.error(f"Error: {e}")
+            logger.error(traceback.format_exc())
             raise e
 
     return inner_function

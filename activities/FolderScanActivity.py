@@ -6,8 +6,8 @@ from Activity import Activity
 from CentralDispatch import CentralDispatch
 from EventTypes import KeyStroke, ButtonEvent
 from FolderScanApp import ScanComplete, ScanStarted
-from HelpActivity import HelpActivity
-from TextInputTest import TextInputTest
+from activities.HelpActivity import HelpActivity
+from activities.TextInputTest import TextInputTest
 from foldercore import breadth_first, make_folder_tree
 from printers import make_top_bar, make_bottom_bar, make_spacer
 from ContextUtils import move_menu_left, move_menu_right, is_hidden
@@ -36,7 +36,6 @@ class FolderScanActivity(Activity):
                                               "text_input": {"label": "Send us your reckons",
                                                              "size": 30},
                                               "line_generator": make_folder_tree,
-                                              "input_handler": self._handle_folder_tree_input,
                                               "focus": True},
                               "spacer": {"line_generator": make_spacer},
                               "bottom_bar": {"fixed_size": 2,
@@ -53,7 +52,8 @@ class FolderScanActivity(Activity):
                 subprocess.Popen(r'explorer /select,"{}"'.format(folder.path))
 
         if isinstance(event, KeyStroke):
-            self.handle_ui_input(event)
+            self._handle_folder_tree_input(fold_tree_context=self.display_state["folder_tree"], event=event)
+
             if chr(event.key) == "h":
                 self.application.segue_to(HelpActivity())
             elif chr(event.key) == "e":
@@ -71,7 +71,7 @@ class FolderScanActivity(Activity):
         if isinstance(event, ScanStarted):
             self.update_bottom_bar("status", "Folder scan in progress")
 
-    def _handle_folder_tree_input(self, context, event):
+    def _handle_folder_tree_input(self, fold_tree_context, event):
         if chr(event.key) == " " or chr(event.key) == Keys.ENTER:
             self.toggle_context_menu()
         elif event.key == curses.KEY_UP:
@@ -79,11 +79,11 @@ class FolderScanActivity(Activity):
         elif event.key == curses.KEY_DOWN:
             self.move_selected_folder_down()
         elif event.key == Keys.LEFT_BRACKET:
-            self.move_display_depth_up(context)
+            self.move_display_depth_up(fold_tree_context)
         elif event.key == Keys.RIGHT_BRACKET:
-            self.move_display_depth_down(context)
+            self.move_display_depth_down(fold_tree_context)
 
-        context_menu = context["context_menu"]
+        context_menu = fold_tree_context["context_menu"]
         if not is_hidden(context_menu):
             if event.key == curses.KEY_LEFT:
                 move_menu_left(context=context_menu)

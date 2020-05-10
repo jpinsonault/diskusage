@@ -2,7 +2,7 @@ import curses
 from functools import partial
 from itertools import islice
 from typing import Optional
-
+from loguru import logger
 from ContextUtils import get_text, get_cursor_index, get_x, get_selected
 from PrintItem import PrintItem
 
@@ -80,13 +80,14 @@ def tuple_item_printer(screen, y_index, item, mode):
 
 
 def make_scroll_list(context, remaining_height) -> []:
-    selected_item, selected_index = get_selected(context["selected"], context["items"])
+    selected_item, selected_index = get_selected(context)
+    is_focused = get_focused(context)
 
     visible_items = cut_items_to_window(selected_index, context["items"], remaining_height)
 
     print_items = []
     for item in visible_items:
-        if item == selected_item:
+        if item == selected_item and is_focused:
             print_items.append(partial(print_highlighted_line, 0, item[0]))
         else:
             print_items.append(partial(print_line, 0, item[0]))
@@ -131,9 +132,14 @@ def make_context_menu(context, remaining_heigh=0) -> []:
             print_empty_line]
 
 
+def get_focused(context) -> bool:
+    return context.get("focused", False)
+
+
 def print_text_input(x, context, screen, y):
     cursor_index = get_cursor_index(context)
     text = get_text(context)
+    is_focused = get_focused(context)
 
     x_index = x
 
@@ -141,16 +147,22 @@ def print_text_input(x, context, screen, y):
     screen.addstr(y, x_index, label, curses.A_BOLD)
     x_index += len(label)
 
+    screen.addch(y, x_index, "[", curses.A_BOLD)
+    x_index += 1
+
     for index in range(len(text)):
         char = text[index]
-        if index == cursor_index:
+        if index == cursor_index and is_focused:
             screen.addch(y, x_index, char, curses.A_REVERSE)
         else:
             screen.addch(y, x_index, char, curses.A_NORMAL)
         x_index += 1
 
-    if cursor_index == len(text):
-        screen.addch(y, x_index, " ", curses.A_REVERSE)
+    if cursor_index == len(text) and is_focused:
+        screen.addch(y, x_index, "]", curses.A_REVERSE)
+        x_index += 1
+    else:
+        screen.addch(y, x_index, "]", curses.A_BOLD)
         x_index += 1
 
 
@@ -158,3 +170,7 @@ def print_text_line(screen, context, start_index, remaining_height):
     screen.addstr(start_index, get_x(context), context["text"])
 
     return context["fixed_size"]
+
+
+def make_text_input(context, remaining_height):
+    return [partial(print_text_input, 0, context)]

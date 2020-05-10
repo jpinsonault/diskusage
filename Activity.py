@@ -27,11 +27,6 @@ class Activity:
 
     def on_event(self, event: object): pass
 
-    def handle_ui_input(self, event):
-        for name, context in self.display_state.items():
-            if context.get("focus", False):
-                context["input_handler"](context, event)
-
     def generate_line_printers(self) -> [callable]:
         num_rows, num_cols = self.application.curses_screen.getmaxyx()
 

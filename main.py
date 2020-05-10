@@ -1,13 +1,11 @@
 # Usage: python3 main.py PATH_TO_ANALYZE -s MIN_SIZE_GB
 
 import argparse
-import curses
 from curses import wrapper
 from functools import partial
 from pathlib import Path
 
-from CentralDispatch import CentralDispatch
-from FolderScanActivity import FolderScanActivity
+from activities.FolderScanActivity import FolderScanActivity
 from FolderScanApp import FolderScanApp
 from folder import Folder
 

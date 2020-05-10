@@ -1,16 +1,16 @@
 import curses
 import traceback
 from collections import defaultdict
-from datetime import datetime
 from enum import Enum
 from queue import Queue
-
+from loguru import logger
 from Activity import Activity
 from CentralDispatch import CentralDispatch
 from EventTypes import StopApplication, ExceptionOccured, KeyStroke
-from ShowExceptionActivity import ShowExceptionActivity
-from exception_utils import try_print_line
+from activities.LogViewerActivity import LogViewerActivity
+from activities.ShowExceptionActivity import ShowExceptionActivity
 
+from loguru import logger
 
 class Segue(Enum):
     PUSH = 0
@@ -35,11 +35,11 @@ class Application:
             try:
                 raise shutdown_event.exception
             except Exception as e:
-                print("Shutdown because of error:")
-                print(f"{e.__class__.__name__}: {e}")
-                print(traceback.format_exc())
+                logger.debug("Shutdown because of error:")
+                logger.debug(f"{e.__class__.__name__}: {e}")
+                logger.debug(traceback.format_exc())
         else:
-            print("Exited Normally")
+            logger.debug("Exited Normally")
 
     def subscribe(self, event_type, delegate):
         self.event_subscribers[event_type].add(delegate)
@@ -54,16 +54,17 @@ class Application:
         for event_type in self.event_subscribers:
             self.unsubscribe(event_type, delegate)
 
-    def redirect_stdout(self):
-        pass
+    def setup_logger(self):
+        logger.add("application_log.log", format="{time} {level} {message}")
 
     def start(self, activity: Activity):
-        self.redirect_stdout()
+        self.setup_logger()
         curses.curs_set(0)
         CentralDispatch.default_exception_handler = self._shutdown_app_exception_handler
 
         self.main_thread = CentralDispatch.create_serial_queue()
         self.subscribe(event_type=ExceptionOccured, delegate=self)
+        self.subscribe(event_type=KeyStroke, delegate=self)
         self.shutdown_signal = CentralDispatch.future(self._event_monitor)
         self.start_key_monitor()
         self.on_start()
@@ -95,30 +96,6 @@ class Application:
 
         self.stack.append(activity)
         activity._start(application=self)
-        self.animate_segue(activity)
-
-    def animate_segue(self, activity, animation_length=250):
-        num_rows, num_cols = self.curses_screen.getmaxyx()
-
-        screen = self.curses_screen
-        line_printers = activity.generate_line_printers()
-        start = datetime.now()
-
-        while True:
-            time_since_start = (datetime.now() - start).total_seconds() * 1000
-            progress = min(1.0, time_since_start / animation_length)
-
-            num_lines_to_print = int(progress * num_rows)
-            starting_y = num_rows - num_lines_to_print
-            print(f"progress: {progress}")
-            print(f"starting_y = num_rows - num_lines_to_print: {starting_y} = {num_rows} - {num_lines_to_print}")
-
-            screen.clear()
-            for index, y in enumerate(range(starting_y, num_rows-1)):
-                try_print_line(line_printers[index], screen, y)
-
-            screen.refresh()
-            if progress == 1.0: break
 
     def segue_to(self, activity: Activity, segue_type=Segue.PUSH):
         self.main_thread.submit_async(self._segue_to, activity, segue_type=segue_type)
@@ -181,15 +158,18 @@ class Application:
         self.main_thread.submit_async(self._debug_message, lines)
 
     def on_event(self, event):
+        if isinstance(event, KeyStroke):
+            if event.key == curses.KEY_F1:
+                self.segue_to(LogViewerActivity())
         if isinstance(event, ExceptionOccured):
             if self.last_exception is not None:
-                print("While handling one exception, another occurred.\nOriginal exception: {}")
-                print(f"{self.last_exception.__class__.__name__}: {self.last_exception}")
-                print(traceback.format_exc())
+                logger.debug("While handling one exception, another occurred.\nOriginal exception: {}")
+                logger.debug(f"{self.last_exception.__class__.__name__}: {self.last_exception}")
+                logger.debug(traceback.format_exc())
                 self.event_queue.put(StopApplication(exception=event.exception))
             else:
                 self.last_exception = event.exception
-                self.segue_to(ShowExceptionActivity(event.exception), segue_type=Segue.PUSH)
+                self.segue_to(ShowExceptionActivity(event.exception))
 
     def _shutdown_app_exception_handler(self, function):
         def inner_function(*args, **kwargs):

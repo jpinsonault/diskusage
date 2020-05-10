@@ -37,9 +37,8 @@ def get_x(context):
 
 
 def scroll_up(context):
-    selected_item = context["selected"]
     items = context["items"]
-    item, index = get_selected(selected_item, items)
+    item, index = get_selected(context)
 
     try:
         new_selected_item = items[max(0, index - 1)]
@@ -50,9 +49,8 @@ def scroll_up(context):
 
 
 def scroll_down(context):
-    selected_item = context["selected"]
     items = context["items"]
-    item, index = get_selected(selected_item, items)
+    item, index = get_selected(context)
 
     try:
         new_selected_index = min(len(items) - 1, index + 1)
@@ -68,7 +66,10 @@ def is_hidden(context):
 
 
 # Sanitizes index to make sure it's in a list
-def get_selected(item, items) -> (Optional[object], int):
+def get_selected(context) -> (Optional[object], int):
+    item = context.get("selected", None)
+    items = context["items"]
+
     if item is None:
         if len(items) > 0:
             return items[0], 0
