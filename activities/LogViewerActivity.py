@@ -4,7 +4,7 @@ import Keys
 from Activity import Activity
 from ContextUtils import scroll_up, scroll_down
 from EventTypes import KeyStroke
-from input_handlers import handle_text_box_input, handle_scroll_list_input
+from input_handlers import handle_text_box_input, handle_scroll_list_input, TextBoxSubmit
 from printers import make_top_bar, make_scroll_list, make_text_input, make_spacer
 from loguru import logger
 
@@ -19,6 +19,7 @@ class LogViewerActivity(Activity):
 
     def on_start(self):
         self.application.subscribe(KeyStroke, self, self.on_key_stroke)
+        self.application.subscribe(TextBoxSubmit, self, self.on_enter_pressed)
 
         self.display_state = {"top_bar": {"items": {"title": "Application Log",
                                                     "help": "Press ESC to go back"},
@@ -35,13 +36,16 @@ class LogViewerActivity(Activity):
 
         self.display_state[self.focus]["focused"] = True
 
+    def on_enter_pressed(self, event: TextBoxSubmit):
+        log_items = self.display_state["log_output"]["items"]
+        log_items.append((self.display_state["search_bar"]["text"], 1))
+
+        self.refresh_screen()
+
     def on_key_stroke(self, event: KeyStroke):
         focused_context = self.display_state[self.focus]
         input_handler = focused_context["input_handler"]
         input_handler(self.focus, focused_context, event, self.event_queue)
-
-        if event.key == Keys.ENTER:
-            self.display_state["log_output"]["items"].append((self.display_state["search_bar"]["text"], 1))
 
         if event.key == Keys.ESC:
             self.application.pop_activity()
