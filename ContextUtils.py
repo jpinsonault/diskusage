@@ -37,46 +37,31 @@ def get_x(context):
 
 
 def scroll_up(context):
-    items = context["items"]
-    item, index = get_selected(context)
-
-    try:
-        new_selected_item = items[max(0, index - 1)]
-    except IndexError:
-        new_selected_item = None
-
-    context["selected"] = new_selected_item
+    index = get_selected_index(context)
+    set_selected_index(context, new_index=index - 1)
 
 
 def scroll_down(context):
-    items = context["items"]
-    item, index = get_selected(context)
-
-    try:
-        new_selected_index = min(len(items) - 1, index + 1)
-        new_selected_item = items[new_selected_index]
-    except IndexError:
-        new_selected_item = None
-
-    context["selected"] = new_selected_item
+    index = get_selected_index(context)
+    set_selected_index(context, new_index=index + 1)
 
 
 def is_hidden(context):
     return context.get("hidden", False)
 
 
-# Sanitizes index to make sure it's in a list
-def get_selected(context) -> (Optional[object], int):
-    item = context.get("selected", None)
-    items = context["items"]
+def set_selected_index(context, new_index) -> int:
+    selected_index = max(0, new_index)
+    selected_index = min(len(context["items"]) - 1, selected_index)
 
-    if item is None:
-        if len(items) > 0:
-            return items[0], 0
-        else:
-            return None, 0
+    context["selected_index"] = selected_index
+    return selected_index
 
-    if item in items:
-        return item, items.index(item)
-    else:
-        return None, 0
+
+def get_selected_index(context) -> int:
+    selected_index = context.get("selected_index", 0)
+
+    selected_index = max(0, selected_index)
+    selected_index = min(len(context["items"]) - 1, selected_index)
+
+    return selected_index

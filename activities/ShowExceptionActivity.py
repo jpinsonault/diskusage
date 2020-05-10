@@ -38,7 +38,6 @@ class ShowExceptionActivity(Activity):
                                           "fixed_size": 2,
                                           "line_generator": make_top_bar},
                               "exception_text": {"text": exception_text,
-                                                 "selected": None,
                                                  "focused": True,
                                                  "line_generator": make_multiline_text},
                               "spacer": {"line_generator": make_spacer},

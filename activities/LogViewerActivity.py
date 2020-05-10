@@ -25,7 +25,7 @@ class LogViewerActivity(Activity):
                                                     "help": "Press ESC to go back"},
                                           "fixed_size": 2,
                                           "line_generator": make_top_bar},
-                              "log_output": {"items": [("woah", 1)],
+                              "log_output": {"items": ["woah"],
                                              "line_generator": make_scroll_list,
                                              "input_handler": handle_scroll_list_input},
                               "spacer": {"line_generator": make_spacer},

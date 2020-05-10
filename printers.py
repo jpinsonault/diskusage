@@ -3,7 +3,7 @@ from functools import partial
 from itertools import islice
 from typing import Optional
 from loguru import logger
-from ContextUtils import get_text, get_cursor_index, get_x, get_selected
+from ContextUtils import get_text, get_cursor_index, get_x, get_selected_index
 from PrintItem import PrintItem
 
 
@@ -68,7 +68,7 @@ def start_stop(index, window_size, list_size):
 
 def cut_items_to_window(selected_index, items, window_size):
     start, stop = start_stop(selected_index, window_size, len(items))
-    return islice(items, start, stop)
+    return start, stop, islice(items, start, stop)
 
 
 def default_item_printer(screen, y_index, item, mode):
@@ -80,17 +80,17 @@ def tuple_item_printer(screen, y_index, item, mode):
 
 
 def make_scroll_list(context, remaining_height) -> []:
-    selected_item, selected_index = get_selected(context)
+    selected_index = get_selected_index(context)
     is_focused = get_focused(context)
 
-    visible_items = cut_items_to_window(selected_index, context["items"], remaining_height)
+    start, stop, visible_items = cut_items_to_window(selected_index, context["items"], remaining_height)
 
     print_items = []
-    for item in visible_items:
-        if item == selected_item and is_focused:
-            print_items.append(partial(print_highlighted_line, 0, item[0]))
+    for index, item in zip(range(start, stop), visible_items):
+        if index == selected_index and is_focused:
+            print_items.append(partial(print_highlighted_line, 0, str(item)))
         else:
-            print_items.append(partial(print_line, 0, item[0]))
+            print_items.append(partial(print_line, 0, str(item)))
 
     return print_items
 

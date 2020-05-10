@@ -10,13 +10,12 @@ from printers import make_scroll_list, make_top_bar
 from ContextUtils import scroll_up, scroll_down
 
 commands = [
-    "Up/Down          | Navigate around",
-    "'['              | Collapse tree up one level",
-    "']'              | Expand tree one level lower",
-    "'h'              | Show this help",
-    "'n'              | Start a new scan",
-    "Delete/Backspace | Delete folder with confirmation",
-    "Ctrl-C           | Exit the program"
+    "Up/Down | Navigate around",
+    "[       | Collapse tree up one level",
+    "]       | Expand tree one level lower",
+    "h       | Show this help",
+    "F1      | Show application log",
+    "Ctrl-C  | Exit the program"
 ]
 
 
@@ -27,14 +26,11 @@ class HelpActivity(Activity):
     def on_start(self):
         self.application.subscribe(KeyStroke, self, self.on_key_stroke)
 
-        command_list = [(command, i) for i, command in enumerate(commands)]
-
         self.display_state = {"top_bar": {"items": {"title": "Command help",
                                                     "message": "Press ESC to return"},
                                           "fixed_size": 2,
                                           "line_generator": make_top_bar},
-                              "command_list": {"items": command_list,
-                                               "selected": None,
+                              "command_list": {"items": commands,
                                                "focused": True,
                                                "line_generator": make_scroll_list}}
 
