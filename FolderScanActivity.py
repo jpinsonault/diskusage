@@ -9,7 +9,7 @@ from FolderScanApp import ScanComplete, ScanStarted
 from HelpActivity import HelpActivity
 from TextInputTest import TextInputTest
 from foldercore import breadth_first, make_folder_tree
-from printers import make_top_bar, make_bottom_bar
+from printers import make_top_bar, make_bottom_bar, make_spacer
 from ContextUtils import move_menu_left, move_menu_right, is_hidden
 
 
@@ -38,6 +38,7 @@ class FolderScanActivity(Activity):
                                               "line_generator": make_folder_tree,
                                               "input_handler": self._handle_folder_tree_input,
                                               "focus": True},
+                              "spacer": {"line_generator": make_spacer},
                               "bottom_bar": {"fixed_size": 2,
                                              "items": {"status": "Folder scan in progress"},
                                              "line_generator": make_bottom_bar}}

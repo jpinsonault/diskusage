@@ -5,7 +5,7 @@ import traceback
 import Keys
 from EventTypes import KeyStroke
 from Activity import Activity
-from printers import make_top_bar, make_bottom_bar, make_multiline_text
+from printers import make_top_bar, make_bottom_bar, make_multiline_text, make_spacer
 from ContextUtils import scroll_up, scroll_down
 
 admonishments = [
@@ -40,6 +40,7 @@ class ShowExceptionActivity(Activity):
                               "exception_text": {"text": exception_text,
                                                  "selected": None,
                                                  "line_generator": make_multiline_text},
+                              "spacer": {"line_generator": make_spacer},
                               "bottom_bar": {"items": {"admonishment": admonishment},
                                              "fixed_size": 2,
                                              "line_generator": make_bottom_bar}}

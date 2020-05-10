@@ -1,6 +1,7 @@
 import curses
 import traceback
 from collections import defaultdict
+from datetime import datetime
 from enum import Enum
 from queue import Queue
 
@@ -8,6 +9,7 @@ from Activity import Activity
 from CentralDispatch import CentralDispatch
 from EventTypes import StopApplication, ExceptionOccured, KeyStroke
 from ShowExceptionActivity import ShowExceptionActivity
+from exception_utils import try_print_line
 
 
 class Segue(Enum):
@@ -93,6 +95,30 @@ class Application:
 
         self.stack.append(activity)
         activity._start(application=self)
+        self.animate_segue(activity)
+
+    def animate_segue(self, activity, animation_length=250):
+        num_rows, num_cols = self.curses_screen.getmaxyx()
+
+        screen = self.curses_screen
+        line_printers = activity.generate_line_printers()
+        start = datetime.now()
+
+        while True:
+            time_since_start = (datetime.now() - start).total_seconds() * 1000
+            progress = min(1.0, time_since_start / animation_length)
+
+            num_lines_to_print = int(progress * num_rows)
+            starting_y = num_rows - num_lines_to_print
+            print(f"progress: {progress}")
+            print(f"starting_y = num_rows - num_lines_to_print: {starting_y} = {num_rows} - {num_lines_to_print}")
+
+            screen.clear()
+            for index, y in enumerate(range(starting_y, num_rows-1)):
+                try_print_line(line_printers[index], screen, y)
+
+            screen.refresh()
+            if progress == 1.0: break
 
     def segue_to(self, activity: Activity, segue_type=Segue.PUSH):
         self.main_thread.submit_async(self._segue_to, activity, segue_type=segue_type)
@@ -157,7 +183,9 @@ class Application:
     def on_event(self, event):
         if isinstance(event, ExceptionOccured):
             if self.last_exception is not None:
-                print("While handling one exception, another occurred:")
+                print("While handling one exception, another occurred.\nOriginal exception: {}")
+                print(f"{self.last_exception.__class__.__name__}: {self.last_exception}")
+                print(traceback.format_exc())
                 self.event_queue.put(StopApplication(exception=event.exception))
             else:
                 self.last_exception = event.exception
@@ -171,3 +199,4 @@ class Application:
                 self.event_queue.put(ExceptionOccured(exception=e))
 
         return inner_function
+

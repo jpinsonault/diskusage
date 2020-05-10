@@ -2,11 +2,10 @@ import curses
 from functools import partial
 
 import Keys
-from PrintItem import PrintItem
 from Activity import Activity
-from EventTypes import KeyStroke
-from printers import print_text_input, print_text_line, make_top_bar, print_line
 from ContextUtils import get_text, get_cursor_index, get_text_length
+from EventTypes import KeyStroke
+from printers import print_text_input, make_top_bar, print_line
 
 
 class TextInputTest(Activity):
@@ -49,28 +48,22 @@ class TextInputTest(Activity):
                 input_context["text"] = chr(key)
             input_context["cursor_index"] = get_cursor_index(input_context) + 1
         if key == Keys.BACKSPACE:
-            if len(input_context["text"]) > 0:
                 i = get_cursor_index(input_context)
                 input_context["text"] = text[:i - 1] + text[i:]
                 input_context["cursor_index"] = get_cursor_index(input_context) - 1
 
         if event.key == curses.KEY_LEFT:
-            print(get_cursor_index(input_context))
             if get_cursor_index(input_context) > 0:
                 input_context["cursor_index"] = get_cursor_index(input_context) - 1
-                print(get_cursor_index(input_context))
 
         elif event.key == curses.KEY_RIGHT:
-            print(get_cursor_index(input_context))
             if get_cursor_index(input_context) < get_text_length(input_context):
                 input_context["cursor_index"] = get_cursor_index(input_context) + 1
-                print(get_cursor_index(input_context))
 
         if event.key == curses.CTL_LEFT:
             input_context["cursor_index"] = get_cursor_index(input_context)
             text = get_text(input_context)
 
-            print(text, len(text), input_context["cursor_index"])
             while input_context["cursor_index"] > 0 and text[input_context["cursor_index"] - 1] != " ":
                 input_context["cursor_index"] = input_context["cursor_index"] - 1
 
@@ -81,7 +74,6 @@ class TextInputTest(Activity):
             input_context["cursor_index"] = get_cursor_index(input_context)
             text = get_text(input_context)
 
-            print(text, len(text), input_context["cursor_index"])
             while input_context["cursor_index"] < len(text) and text[input_context["cursor_index"] - 1] != " ":
                 input_context["cursor_index"] = input_context["cursor_index"] + 1
 

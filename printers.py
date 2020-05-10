@@ -33,12 +33,19 @@ def make_top_bar(context, remaining_height):
 
 def make_bottom_bar(context, remaining_height):
     def print_bottom_bar(screen, y) -> int:
-        num_rows, num_cols = screen.getmaxyx()
         items = [text for key, text in context["items"].items()]
 
-        screen.addstr(num_rows-1, 0, " | ".join(items), curses.A_BOLD)
+        screen.addstr(y, 0, " | ".join(items), curses.A_BOLD)
 
     return [print_empty_line, print_bottom_bar]
+
+
+def make_spacer(context, remaining_height):
+    """
+        Fills up the remaining space with empty lines
+        Useful for shoving ui bits to the bottom of the screen
+    """
+    return [print_empty_line for _ in range(remaining_height)]
 
 
 def start_stop(index, window_size, list_size):
