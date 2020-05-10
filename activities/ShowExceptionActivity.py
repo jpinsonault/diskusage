@@ -39,6 +39,7 @@ class ShowExceptionActivity(Activity):
                                           "line_generator": make_top_bar},
                               "exception_text": {"text": exception_text,
                                                  "selected": None,
+                                                 "focused": True,
                                                  "line_generator": make_multiline_text},
                               "spacer": {"line_generator": make_spacer},
                               "bottom_bar": {"items": {"admonishment": admonishment},

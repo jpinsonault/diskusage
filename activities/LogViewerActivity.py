@@ -5,7 +5,7 @@ from Activity import Activity
 from ContextUtils import scroll_up, scroll_down
 from EventTypes import KeyStroke
 from input_handlers import handle_text_box_input, handle_scroll_list_input
-from printers import make_top_bar, make_scroll_list, make_text_input
+from printers import make_top_bar, make_scroll_list, make_text_input, make_spacer
 from loguru import logger
 
 class LogViewerActivity(Activity):
@@ -26,6 +26,7 @@ class LogViewerActivity(Activity):
                               "log_output": {"items": [("woah", 1)],
                                              "line_generator": make_scroll_list,
                                              "input_handler": handle_scroll_list_input},
+                              "spacer": {"line_generator": make_spacer},
                               "search_bar": {"label": "Search",
                                              "line_generator": make_text_input,
                                              "fixed_size": 1,
@@ -37,10 +38,9 @@ class LogViewerActivity(Activity):
         if isinstance(event, KeyStroke):
             focused_context = self.display_state[self.focus]
             input_handler = focused_context["input_handler"]
-            input_handler(focused_context, event)
+            input_handler(self.focus, focused_context, event, self.event_queue)
 
             if event.key == Keys.ENTER:
-                logger.info(self.display_state["search_bar"]["text"])
                 self.display_state["log_output"]["items"].append((self.display_state["search_bar"]["text"], 1))
 
             if event.key == Keys.ESC:

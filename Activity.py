@@ -5,6 +5,7 @@ from exception_utils import try_make_lines, try_print_line
 class Activity:
     def __init__(self):
         self.application = None
+        self.event_queue = None
         self.screen = None
         self.main_thread = None
         self.display_state = {}
@@ -12,6 +13,7 @@ class Activity:
 
     def _start(self, application):
         self.application = application
+        self.event_queue = application.event_queue
         self.screen = application.curses_screen
         self.main_thread = application.main_thread
         self.on_start()

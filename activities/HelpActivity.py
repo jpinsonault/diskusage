@@ -1,6 +1,8 @@
 import curses
 from functools import partial
 
+from loguru import logger
+
 import Keys
 from EventTypes import KeyStroke
 from Activity import Activity
@@ -33,6 +35,7 @@ class HelpActivity(Activity):
                                           "line_generator": make_top_bar},
                               "command_list": {"items": command_list,
                                                "selected": None,
+                                               "focused": True,
                                                "line_generator": make_scroll_list}}
 
     def on_event(self, event):

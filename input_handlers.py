@@ -1,10 +1,24 @@
 import curses
+from queue import Queue
+
+from loguru import logger
 
 import Keys
 from ContextUtils import get_text, get_cursor_index, get_text_length, scroll_up, scroll_down
 
 
-def handle_text_box_input(input_context, event):
+class UIEvent:
+    def __init__(self, ui_element):
+        self.ui_element = ui_element
+
+
+class TextBoxChange(UIEvent): pass
+
+
+class TextBoxSubmit(UIEvent): pass
+
+
+def handle_text_box_input(ui_element: str, input_context, event, event_queue: Queue):
     """
     Handles basic text input, cursor movement, shortcut keys
     """
@@ -18,11 +32,14 @@ def handle_text_box_input(input_context, event):
         else:
             input_context["text"] = chr(key)
         input_context["cursor_index"] = get_cursor_index(input_context) + 1
+        event_queue.put(TextBoxChange(ui_element=ui_element))
+
     if key == Keys.BACKSPACE:
         i = get_cursor_index(input_context)
         if i > 0:
             input_context["text"] = text[:i - 1] + text[i:]
             input_context["cursor_index"] = get_cursor_index(input_context) - 1
+            event_queue.put(TextBoxChange(ui_element=ui_element))
 
     if event.key == curses.KEY_LEFT:
         if get_cursor_index(input_context) > 0:
@@ -60,9 +77,10 @@ def handle_text_box_input(input_context, event):
 
     elif event.key == Keys.ENTER:
         input_context["cursor_index"] = len(text)
+        event_queue.put(TextBoxSubmit(ui_element=ui_element))
 
 
-def handle_scroll_list_input(scroll_context, event):
+def handle_scroll_list_input(ui_element: str, scroll_context, event, event_queue: Queue):
     if event.key == curses.KEY_UP:
         scroll_up(scroll_context)
     if event.key == curses.KEY_DOWN:

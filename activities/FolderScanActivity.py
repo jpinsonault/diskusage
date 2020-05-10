@@ -7,7 +7,6 @@ from CentralDispatch import CentralDispatch
 from EventTypes import KeyStroke, ButtonEvent
 from FolderScanApp import ScanComplete, ScanStarted
 from activities.HelpActivity import HelpActivity
-from activities.TextInputTest import TextInputTest
 from foldercore import breadth_first, make_folder_tree
 from printers import make_top_bar, make_bottom_bar, make_spacer
 from ContextUtils import move_menu_left, move_menu_right, is_hidden
@@ -58,8 +57,6 @@ class FolderScanActivity(Activity):
                 self.application.segue_to(HelpActivity())
             elif chr(event.key) == "e":
                 raise Exception("This is just a test")
-            elif chr(event.key) == "t":
-                self.application.segue_to(TextInputTest())
             else:
                 self.display_state["top_bar"]["items"]["last_key"] = f"Last key: {event.key}"
 
