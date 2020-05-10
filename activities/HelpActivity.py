@@ -25,7 +25,7 @@ class HelpActivity(Activity):
         super().__init__()
 
     def on_start(self):
-        self.application.subscribe(KeyStroke, self)
+        self.application.subscribe(KeyStroke, self, self.on_key_stroke)
 
         command_list = [(command, i) for i, command in enumerate(commands)]
 
@@ -38,13 +38,12 @@ class HelpActivity(Activity):
                                                "focused": True,
                                                "line_generator": make_scroll_list}}
 
-    def on_event(self, event):
-        if isinstance(event, KeyStroke):
-            if event.key == Keys.ESC:
-                self.application.pop_activity()
+    def on_key_stroke(self, event: KeyStroke):
+        if event.key == Keys.ESC:
+            self.application.pop_activity()
 
-            if event.key == curses.KEY_UP:
-                scroll_up(self.display_state["command_list"])
-            if event.key == curses.KEY_DOWN:
-                scroll_down(self.display_state["command_list"])
-            self.refresh_screen()
+        if event.key == curses.KEY_UP:
+            scroll_up(self.display_state["command_list"])
+        if event.key == curses.KEY_DOWN:
+            scroll_down(self.display_state["command_list"])
+        self.refresh_screen()

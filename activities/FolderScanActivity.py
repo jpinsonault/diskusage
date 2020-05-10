@@ -17,10 +17,10 @@ class FolderScanActivity(Activity):
         super().__init__()
 
     def on_start(self):
-        self.application.subscribe(event_type=KeyStroke, delegate=self)
-        self.application.subscribe(event_type=ScanComplete, delegate=self)
-        self.application.subscribe(event_type=ScanStarted, delegate=self)
-        self.application.subscribe(event_type=ButtonEvent, delegate=self)
+        self.application.subscribe(event_type=KeyStroke, activity=self, callback=self.on_key_stroke)
+        self.application.subscribe(event_type=ScanComplete, activity=self, callback=self.on_scan_complete)
+        self.application.subscribe(event_type=ScanStarted, activity=self, callback=self.on_scan_started)
+        self.application.subscribe(event_type=ButtonEvent, activity=self, callback=self.on_button_event)
 
         self.display_state = {"top_bar": {"items": {"title": "Beagle's Folder Analyzer",
                                                     "help": "Press 'h' for help"},
@@ -43,30 +43,29 @@ class FolderScanActivity(Activity):
 
         self._refresh_timer(shutdown_signal=self.application.shutdown_signal)
 
-    def on_event(self, event):
-        if isinstance(event, ButtonEvent):
-            if event.identifier == "open in explorer":
-                folder = self.display_state["folder_tree"]["selected_folder"]
+    def on_button_event(self, event: ButtonEvent):
+        if event.identifier == "open in explorer":
+            folder = self.display_state["folder_tree"]["selected_folder"]
 
-                subprocess.Popen(r'explorer /select,"{}"'.format(folder.path))
+            subprocess.Popen(r'explorer /select,"{}"'.format(folder.path))
 
-        if isinstance(event, KeyStroke):
-            self._handle_folder_tree_input(fold_tree_context=self.display_state["folder_tree"], event=event)
+    def on_key_stroke(self, event: KeyStroke):
+        self._handle_folder_tree_input(fold_tree_context=self.display_state["folder_tree"], event=event)
 
-            if chr(event.key) == "h":
-                self.application.segue_to(HelpActivity())
-            elif chr(event.key) == "e":
-                raise Exception("This is just a test")
-            else:
-                self.display_state["top_bar"]["items"]["last_key"] = f"Last key: {event.key}"
+        if chr(event.key) == "h":
+            self.application.segue_to(HelpActivity())
+        elif chr(event.key) == "e":
+            raise Exception("This is just a test")
+        else:
+            self.display_state["top_bar"]["items"]["last_key"] = f"Last key: {event.key}"
 
-            self.refresh_screen()
+        self.refresh_screen()
 
-        if isinstance(event, ScanComplete):
-            self.update_bottom_bar("status", "Scan complete")
+    def on_scan_complete(self, event: ScanComplete):
+        self.update_bottom_bar("status", "Scan complete")
 
-        if isinstance(event, ScanStarted):
-            self.update_bottom_bar("status", "Folder scan in progress")
+    def on_scan_started(self, event: ScanStarted):
+        self.update_bottom_bar("status", "Folder scan in progress")
 
     def _handle_folder_tree_input(self, fold_tree_context, event):
         if chr(event.key) == " " or chr(event.key) == Keys.ENTER:

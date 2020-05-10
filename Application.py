@@ -1,6 +1,6 @@
 import curses
 import traceback
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from enum import Enum
 from queue import Queue
 from loguru import logger
@@ -12,9 +12,13 @@ from activities.ShowExceptionActivity import ShowExceptionActivity
 
 from loguru import logger
 
+
 class Segue(Enum):
     PUSH = 0
     REPLACE = 1
+
+
+LabeledCallback = namedtuple("LabeledCallback", ["label", "callback"])
 
 
 class Application:
@@ -41,18 +45,14 @@ class Application:
         else:
             logger.debug("Exited Normally")
 
-    def subscribe(self, event_type, delegate):
-        self.event_subscribers[event_type].add(delegate)
+    def subscribe(self, event_type, activity, callback):
+        self.event_subscribers[event_type].add(LabeledCallback(activity, callback))
 
-    def unsubscribe(self, event_type, delegate):
-        try:
-            self.event_subscribers[event_type].remove(delegate)
-        except KeyError:
-            pass
-
-    def unsubscribe_all(self, delegate):
-        for event_type in self.event_subscribers:
-            self.unsubscribe(event_type, delegate)
+    def unsubscribe_all(self, from_activity):
+        for event_type, subscribers in self.event_subscribers.items():
+            for labeled_callback in subscribers.copy():
+                if labeled_callback.label == from_activity:
+                    self.event_subscribers[event_type].remove(labeled_callback)
 
     def setup_logger(self):
         logger.add("application_log.log", format="{time} {level} {message}")
@@ -63,8 +63,8 @@ class Application:
         CentralDispatch.default_exception_handler = self._shutdown_app_exception_handler
 
         self.main_thread = CentralDispatch.create_serial_queue()
-        self.subscribe(event_type=ExceptionOccured, delegate=self)
-        self.subscribe(event_type=KeyStroke, delegate=self)
+        self.subscribe(event_type=ExceptionOccured, activity=self, callback=self.on_exception)
+        self.subscribe(event_type=KeyStroke, activity=self, callback=self.on_key_stroke)
         self.shutdown_signal = CentralDispatch.future(self._event_monitor)
         self.start_key_monitor()
         self.on_start()
@@ -114,12 +114,12 @@ class Application:
     def pop_activity(self):
         self.main_thread.submit_async(self._pop_activity)
 
-    def _dispatch_event(self, subscriber, event):
-        subscriber.on_event(event)
+    def _dispatch_event(self, callback, event):
+        callback(event)
 
     def dispatch_event(self, event):
-        for subscriber in self.event_subscribers[type(event)]:
-            self.main_thread.submit_async(self._dispatch_event, subscriber, event)
+        for labeled_callback in self.event_subscribers[type(event)]:
+            self.main_thread.submit_async(self._dispatch_event, labeled_callback.callback, event)
 
     def _event_monitor(self):
         event = self.event_queue.get()
@@ -157,19 +157,19 @@ class Application:
 
         self.main_thread.submit_async(self._debug_message, lines)
 
-    def on_event(self, event):
-        if isinstance(event, KeyStroke):
-            if event.key == curses.KEY_F1:
-                self.segue_to(LogViewerActivity())
-        if isinstance(event, ExceptionOccured):
-            if self.last_exception is not None:
-                logger.debug("While handling one exception, another occurred.\nOriginal exception: {}")
-                logger.debug(f"{self.last_exception.__class__.__name__}: {self.last_exception}")
-                logger.debug(traceback.format_exc())
-                self.event_queue.put(StopApplication(exception=event.exception))
-            else:
-                self.last_exception = event.exception
-                self.segue_to(ShowExceptionActivity(event.exception))
+    def on_key_stroke(self, event: KeyStroke):
+        if event.key == curses.KEY_F1:
+            self.segue_to(LogViewerActivity())
+
+    def on_exception(self, event: ExceptionOccured):
+        if self.last_exception is not None:
+            logger.debug("While handling one exception, another occurred.\nOriginal exception: {}")
+            logger.debug(f"{self.last_exception.__class__.__name__}: {self.last_exception}")
+            logger.debug(traceback.format_exc())
+            self.event_queue.put(StopApplication(exception=event.exception))
+        else:
+            self.last_exception = event.exception
+            self.segue_to(ShowExceptionActivity(event.exception))
 
     def _shutdown_app_exception_handler(self, function):
         def inner_function(*args, **kwargs):

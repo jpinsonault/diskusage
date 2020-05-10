@@ -25,7 +25,7 @@ class ShowExceptionActivity(Activity):
         self.exception = exception
 
     def on_start(self):
-        self.application.subscribe(KeyStroke, self)
+        self.application.subscribe(KeyStroke, self, self.on_key_stroke)
         try:
             raise self.exception
         except Exception as e:
@@ -49,13 +49,12 @@ class ShowExceptionActivity(Activity):
     def on_stop(self):
         self.application.last_exception = None
 
-    def on_event(self, event):
-        if isinstance(event, KeyStroke):
-            if event.key == Keys.ESC:
-                self.application.pop_activity()
+    def on_key_stroke(self, event: KeyStroke):
+        if event.key == Keys.ESC:
+            self.application.pop_activity()
 
-            if event.key == curses.KEY_UP:
-                scroll_up(self.display_state["exception_text"])
-            if event.key == curses.KEY_DOWN:
-                scroll_down(self.display_state["exception_text"])
-            self.refresh_screen()
+        if event.key == curses.KEY_UP:
+            scroll_up(self.display_state["exception_text"])
+        if event.key == curses.KEY_DOWN:
+            scroll_down(self.display_state["exception_text"])
+        self.refresh_screen()

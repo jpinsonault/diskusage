@@ -27,8 +27,6 @@ class Activity:
 
     def on_stop(self): pass
 
-    def on_event(self, event: object): pass
-
     def generate_line_printers(self) -> [callable]:
         num_rows, num_cols = self.application.curses_screen.getmaxyx()
 
