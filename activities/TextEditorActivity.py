@@ -9,17 +9,15 @@ from CentralDispatch import CentralDispatch
 from ContextUtils import scroll_up, scroll_down, scroll_to_bottom, get_selected_index, get_items_len
 from EventTypes import KeyStroke
 from input_handlers import handle_text_box_input, handle_scroll_list_input, TextBoxSubmit, ScrollChange
-from printers import make_top_bar, make_scroll_list, make_text_input, make_spacer, make_bottom_bar
+from printers import make_top_bar, make_scroll_list, make_text_input, make_spacer, make_bottom_bar, make_multiline_text, \
+    make_text_editor
 from loguru import logger
 
 
-class LogViewerActivity(Activity):
+class TextEditorActivity(Activity):
 
     def __init__(self):
         super().__init__()
-        self.tab_order = ["log_output", "search_bar"]
-
-        self.focus = "log_output"
         self.stop_signal = False
         self.log_watcher: Future = None
 
@@ -28,21 +26,19 @@ class LogViewerActivity(Activity):
         self.application.subscribe(TextBoxSubmit, self, self.on_enter_pressed)
         self.application.subscribe(ScrollChange, self, self.on_scroll_change)
 
-        self.display_state = {"top_bar": {"items": {"title": "Application Log",
-                                                    "help": "Press ESC to go back"},
-                                          "fixed_size": 2,
-                                          "line_generator": make_top_bar},
-                              "log_output": {"items": [],
-                                             "line_generator": partial(make_scroll_list, self.screen),
-                                             "input_handler": handle_scroll_list_input},
-                              "spacer": {"line_generator": make_spacer},
-                              "search_bar": {"label": "Search",
-                                             "fixed_size": 1,
-                                             "line_generator": make_text_input,
-                                             "input_handler": handle_text_box_input},
-                              "bottom_bar": {"items": {},
-                                             "fixed_size": 2,
-                                             "line_generator": make_bottom_bar}}
+        self.display_state = {
+            "editor": {"items": [],
+                       "line_generator": partial(make_text_editor, self.screen),
+                       "input_handler": handle_text_editor_input},
+            "spacer": {"line_generator": make_spacer},
+            "search_bar": {"label": "Search",
+                           "fixed_size": 1,
+                           "line_generator": make_text_input,
+                           "input_handler": handle_text_box_input},
+            "bottom_bar": {"items": {},
+                           "fixed_size": 2,
+                           "line_generator": make_bottom_bar}
+        }
 
         self.display_state[self.focus]["focused"] = True
         self.log_watcher = CentralDispatch.future(self._run_log_watcher, self.application.log_filename)

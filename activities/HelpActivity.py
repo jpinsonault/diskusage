@@ -32,7 +32,7 @@ class HelpActivity(Activity):
                                           "line_generator": make_top_bar},
                               "command_list": {"items": commands,
                                                "focused": True,
-                                               "line_generator": make_scroll_list}}
+                                               "line_generator": partial(make_scroll_list, self.screen)}}
 
     def on_key_stroke(self, event: KeyStroke):
         if event.key == Keys.ESC:

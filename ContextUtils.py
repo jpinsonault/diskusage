@@ -46,6 +46,14 @@ def scroll_down(context):
     set_selected_index(context, new_index=index + 1)
 
 
+def scroll_to_top(context):
+    set_selected_index(context, new_index=0)
+
+
+def scroll_to_bottom(context):
+    set_selected_index(context, new_index=len(context["items"]))
+
+
 def is_hidden(context):
     return context.get("hidden", False)
 
@@ -65,3 +73,12 @@ def get_selected_index(context) -> int:
     selected_index = min(len(context["items"]) - 1, selected_index)
 
     return selected_index
+
+
+def get_items_len(context) -> int:
+    items = context.get("items", None)
+
+    if items is None:
+        return None
+    else:
+        return len(items)

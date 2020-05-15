@@ -18,6 +18,9 @@ class TextBoxChange(UIEvent): pass
 class TextBoxSubmit(UIEvent): pass
 
 
+class ScrollChange(UIEvent): pass
+
+
 def handle_text_box_input(ui_element: str, input_context, event, event_queue: Queue):
     """
     Handles basic text input, cursor movement, shortcut keys
@@ -85,3 +88,5 @@ def handle_scroll_list_input(ui_element: str, scroll_context, event, event_queue
         scroll_up(scroll_context)
     if event.key == curses.KEY_DOWN:
         scroll_down(scroll_context)
+
+    event_queue.put(ScrollChange(ui_element))

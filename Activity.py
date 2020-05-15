@@ -1,3 +1,8 @@
+from queue import Queue
+
+from loguru import logger
+
+from CentralDispatch import SerialDispatchQueue
 from ContextUtils import get_fixed_size
 from exception_utils import try_make_lines, try_print_line
 
@@ -5,24 +10,28 @@ from exception_utils import try_make_lines, try_print_line
 class Activity:
     def __init__(self):
         self.application = None
-        self.event_queue = None
+        self.event_queue: Queue = None
         self.screen = None
-        self.main_thread = None
+        self.main_thread: SerialDispatchQueue = None
         self.display_state = {}
         self.previous_display_state = {}
+        self.lifecycle_state = "init"
 
     def _start(self, application):
+        self.lifecycle_state = "starting"
         self.application = application
         self.event_queue = application.event_queue
         self.screen = application.curses_screen
         self.main_thread = application.main_thread
         self.on_start()
+        self.lifecycle_state = "started"
         self.refresh_screen()
 
     def on_start(self): pass
 
     def _stop(self):
         self.on_stop()
+        self.lifecycle_state = "stopped"
         self.application = None
 
     def on_stop(self): pass
@@ -54,14 +63,15 @@ class Activity:
         return screen_line_printers
 
     def refresh_screen(self):
-        screen = self.application.curses_screen
-        screen_line_printers = self.generate_line_printers()
+        if self.lifecycle_state != "stopped":
+            screen = self.application.curses_screen
+            screen_line_printers = self.generate_line_printers()
 
-        screen.clear()
-        for y, line_printer in enumerate(screen_line_printers):
-            try_print_line(line_printer, screen, y)
+            screen.clear()
+            for y, line_printer in enumerate(screen_line_printers):
+                try_print_line(line_printer, screen, y)
 
-        screen.refresh()
+            screen.refresh()
 
-        self.previous_display_state = self.display_state
+            self.previous_display_state = self.display_state
 

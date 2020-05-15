@@ -1,11 +1,12 @@
 import curses
 import traceback
 from collections import defaultdict, namedtuple
+from concurrent.futures import Future
 from enum import Enum
 from queue import Queue
 from loguru import logger
 from Activity import Activity
-from CentralDispatch import CentralDispatch
+from CentralDispatch import CentralDispatch, SerialDispatchQueue
 from EventTypes import StopApplication, ExceptionOccured, KeyStroke
 from activities.LogViewerActivity import LogViewerActivity
 from activities.ShowExceptionActivity import ShowExceptionActivity
@@ -23,14 +24,15 @@ LabeledCallback = namedtuple("LabeledCallback", ["label", "callback"])
 
 class Application:
     def __init__(self, curses_screen):
+        self.log_filename = "application.log"
         self.curses_screen = curses_screen
         self.event_subscribers = defaultdict(set)
         self.stack = []
 
         self.event_queue = Queue()
 
-        self.shutdown_signal = None
-        self.main_thread = None
+        self.shutdown_signal: Future = None
+        self.main_thread: SerialDispatchQueue = None
 
         self.last_exception = None
 
@@ -39,11 +41,11 @@ class Application:
             try:
                 raise shutdown_event.exception
             except Exception as e:
-                logger.debug("Shutdown because of error:")
-                logger.debug(f"{e.__class__.__name__}: {e}")
-                logger.debug(traceback.format_exc())
+                logger.info("Shutdown because of error:")
+                logger.info(f"{e.__class__.__name__}: {e}")
+                logger.info(traceback.format_exc())
         else:
-            logger.debug("Exited Normally")
+            logger.info("Exited Normally")
 
     def subscribe(self, event_type, activity, callback):
         self.event_subscribers[event_type].add(LabeledCallback(activity, callback))
@@ -55,7 +57,7 @@ class Application:
                     self.event_subscribers[event_type].remove(labeled_callback)
 
     def setup_logger(self):
-        logger.add("application_log.log", format="{time} {level} {message}")
+        logger.add(self.log_filename, format="{time:HH:mm:ss} {module} {message}")
 
     def start(self, activity: Activity):
         self.setup_logger()
@@ -163,9 +165,9 @@ class Application:
 
     def on_exception(self, event: ExceptionOccured):
         if self.last_exception is not None:
-            logger.debug("While handling one exception, another occurred.\nOriginal exception: {}")
-            logger.debug(f"{self.last_exception.__class__.__name__}: {self.last_exception}")
-            logger.debug(traceback.format_exc())
+            logger.info("While handling one exception, another occurred.\nOriginal exception: {}")
+            logger.info(f"{self.last_exception.__class__.__name__}: {self.last_exception}")
+            logger.info(traceback.format_exc())
             self.event_queue.put(StopApplication(exception=event.exception))
         else:
             self.last_exception = event.exception

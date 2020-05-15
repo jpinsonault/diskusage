@@ -4,3 +4,4 @@ ESC = 27
 ENTER = 10
 BACKSPACE = 8
 TAB = 9
+CTRL_F = 6

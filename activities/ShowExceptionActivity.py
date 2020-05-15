@@ -1,11 +1,12 @@
 import curses
 import random
 import traceback
+from functools import partial
 
 import Keys
 from EventTypes import KeyStroke
 from Activity import Activity
-from printers import make_top_bar, make_bottom_bar, make_multiline_text, make_spacer
+from printers import make_top_bar, make_bottom_bar, make_text_editor, make_spacer
 from ContextUtils import scroll_up, scroll_down
 
 admonishments = [
@@ -39,7 +40,7 @@ class ShowExceptionActivity(Activity):
                                           "line_generator": make_top_bar},
                               "exception_text": {"text": exception_text,
                                                  "focused": True,
-                                                 "line_generator": make_multiline_text},
+                                                 "line_generator": partial(make_text_editor, self.screen)},
                               "spacer": {"line_generator": make_spacer},
                               "bottom_bar": {"items": {"admonishment": admonishment},
                                              "fixed_size": 2,

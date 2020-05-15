@@ -34,7 +34,6 @@ def make_top_bar(context, remaining_height):
 def make_bottom_bar(context, remaining_height):
     def print_bottom_bar(screen, y) -> int:
         items = [text for key, text in context["items"].items()]
-
         screen.addstr(y, 0, " | ".join(items), curses.A_BOLD)
 
     return [print_empty_line, print_bottom_bar]
@@ -79,7 +78,9 @@ def tuple_item_printer(screen, y_index, item, mode):
     screen.addstr(y_index, 0, str(item[0]), mode)
 
 
-def make_scroll_list(context, remaining_height) -> []:
+def make_scroll_list(screen, context, remaining_height) -> []:
+    num_rows, num_cols = screen.getmaxyx()
+
     selected_index = get_selected_index(context)
     is_focused = get_focused(context)
 
@@ -87,25 +88,13 @@ def make_scroll_list(context, remaining_height) -> []:
 
     print_items = []
     for index, item in zip(range(start, stop), visible_items):
+        sanitized = str(item)[:num_cols]
         if index == selected_index and is_focused:
-            print_items.append(partial(print_highlighted_line, 0, str(item)))
+            print_items.append(partial(print_highlighted_line, 0, sanitized))
         else:
-            print_items.append(partial(print_line, 0, str(item)))
+            print_items.append(partial(print_line, 0, sanitized))
 
     return print_items
-
-
-def make_multiline_text(context, remaining_height) -> []:
-    def expand_tabs(text):
-        return "    ".join(text.split("\t"))
-
-    text_lines = []
-    for index, line in enumerate(context["text"].split("\n")):
-        text_lines.append((expand_tabs(line), index))
-
-    context["items"] = text_lines
-
-    return make_scroll_list(context, remaining_height)
 
 
 def print_context_menu(context, screen, y):
@@ -174,3 +163,24 @@ def print_text_line(screen, context, start_index, remaining_height):
 
 def make_text_input(context, remaining_height):
     return [partial(print_text_input, 0, context)]
+
+
+def make_text_editor(screen, context, remaining_height) -> []:
+    num_rows, num_cols = screen.getmaxyx()
+
+    selected_index = get_selected_index(context)
+    is_focused = get_focused(context)
+
+    # text_lines = context["l"]
+
+    start, stop, visible_items = cut_items_to_window(selected_index, context["items"], remaining_height)
+
+    print_items = []
+    for index, item in zip(range(start, stop), visible_items):
+        sanitized = str(item)[:num_cols]
+        if index == selected_index and is_focused:
+            print_items.append(partial(print_highlighted_line, 0, sanitized))
+        else:
+            print_items.append(partial(print_line, 0, sanitized))
+
+    return print_items

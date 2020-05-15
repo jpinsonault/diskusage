@@ -42,6 +42,7 @@ class FolderScanActivity(Activity):
                                              "line_generator": make_bottom_bar}}
 
         self._refresh_timer(shutdown_signal=self.application.shutdown_signal)
+        # self.event_queue.put(KeyStroke(curses.KEY_F1))
 
     def on_button_event(self, event: ButtonEvent):
         if event.identifier == "open in explorer":
